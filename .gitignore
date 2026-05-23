@@ -1,11 +1,30 @@
+# OS
+.DS_Store
+
+# Node
+node_modules/
+
 # Harness engineering
 .harness/snapshots/
+.harness/evidence.json
+.harness/evidence.md
 instance-metadata.json
 *.pid
 
 # Backend
-backend/node_modules/
 backend/data.sqlite
 backend/data.sqlite-journal
 backend/data.sqlite-wal
 backend/data.sqlite-shm
+
+# Secrets — never commit
+backend/.env
+.env
+.env.local
+
+# Fetched datasets (large JSON, refetchable via data/fetch.sh)
+data/*.json
+
+# MCP server
+mcp-server/.wrangler/
+mcp-server/.dev.vars
