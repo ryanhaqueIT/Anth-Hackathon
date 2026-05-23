@@ -1,0 +1,35 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "groundup-mcp",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-01-28",
+  "compatibility_flags": ["nodejs_compat"],
+
+  "vars": {
+    "ENVIRONMENT": "development"
+  },
+
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "GroundupMCP",
+        "class_name": "GroundupMCP"
+      }
+    ]
+  },
+
+  "migrations": [
+    {
+      "tag": "v1",
+      "new_sqlite_classes": ["GroundupMCP"]
+    }
+  ],
+
+  "hyperdrive": [
+    {
+      "binding": "HYPERDRIVE",
+      // TODO: paste the Hyperdrive resource id once provisioned via `wrangler hyperdrive create`.
+      "id": "REPLACE_WITH_HYPERDRIVE_ID"
+    }
+  ]
+}
