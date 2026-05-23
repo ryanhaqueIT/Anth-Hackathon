@@ -44,13 +44,23 @@
     "PostToolUse": [
       {
         "matcher": "Edit|Write|NotebookEdit",
-        "command": "bash .claude/hooks/post-edit.sh"
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash .claude/hooks/post-edit.sh"
+          }
+        ]
       }
     ],
     "PreToolUse": [
       {
         "matcher": "Edit|Write|NotebookEdit",
-        "command": "python3 .claude/hooks/enforce-locations.py"
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 .claude/hooks/enforce-locations.py"
+          }
+        ]
       }
     ]
   }

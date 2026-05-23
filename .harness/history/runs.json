@@ -35,5 +35,39 @@
       "X7": "failed",
       "R1": "passed"
     }
+  },
+  {
+    "run_id": 2,
+    "timestamp": "2026-05-23T05:01:06.221493Z",
+    "duration_ms": 34185,
+    "passed": 2,
+    "failed": 7,
+    "skipped": 7,
+    "total_gates": 9,
+    "gates": {
+      "B1": "failed",
+      "B2": "failed",
+      "B3": "failed",
+      "B4": "skipped",
+      "B5": "failed",
+      "F1": "skipped",
+      "F2": "skipped",
+      "F3": "skipped",
+      "F4": "skipped",
+      "F5": "skipped",
+      "F6": "skipped",
+      "F7": "skipped",
+      "I1": "skipped",
+      "I2": "skipped",
+      "X1": "passed",
+      "X2": "passed",
+      "X3": "skipped",
+      "X4": "skipped",
+      "O1": "skipped",
+      "X5": "failed",
+      "X6": "skipped",
+      "X7": "failed",
+      "R1": "failed"
+    }
   }
 ]

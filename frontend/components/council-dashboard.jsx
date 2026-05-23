@@ -1004,25 +1004,87 @@ function CouncilApp() {
   const [page, setPage] = React.useState('hero');
   const [modal, setModal] = React.useState(null); // 'brief' | 'export' | 'filters' | null
   // Live-data overlay: on mount, fetch /api/dashboard/areas and mutate the
-  // global SUBURBS array in place (preserving layout-only fields poly/x/y)
-  // so the heatmap and side panels read live numbers. Falls back silently
-  // to the hardcoded data.js values if the backend isn't running.
+  // window globals in place — SUBURBS keeps its layout-only fields (poly/x/y)
+  // while gap/checkins/services come from the DB, and NEEDS_BY_SUBURB /
+  // MOOD_PULSE / SPECIALISTS / RECENT_PHRASES are repopulated from the
+  // payload. Falls back silently to the hardcoded data.js values if the
+  // backend isn't running.
   const [, setLiveTick] = React.useState(0);
   React.useEffect(() => {
     if (!window.NPApi) return;
     window.NPApi.getDashboard().then((data) => {
-      if (!data || !Array.isArray(data.areas) || !Array.isArray(window.SUBURBS)) return;
+      if (!data || !Array.isArray(data.areas)) return;
       const byId = Object.fromEntries(data.areas.map((a) => [a.id, a]));
       let touched = false;
-      for (const sub of window.SUBURBS) {
-        const live = byId[sub.id];
-        if (live) {
-          sub.gap      = live.gap_score;
-          sub.checkins = live.total_checkins;
-          sub.services = live.service_count;
-          touched = true;
+
+      // 1. SUBURBS — merge live gap/checkins/services into the visual layout.
+      if (Array.isArray(window.SUBURBS)) {
+        for (const sub of window.SUBURBS) {
+          const live = byId[sub.id];
+          if (live) {
+            sub.gap      = live.gap_score;
+            sub.checkins = live.total_checkins;
+            sub.services = live.service_count;
+            touched = true;
+          }
         }
       }
+
+      // 2. NEEDS_BY_SUBURB — rebuild keyed by area id.
+      if (window.NEEDS_BY_SUBURB) {
+        for (const a of data.areas) {
+          if (!Array.isArray(a.needs) || a.needs.length === 0) continue;
+          window.NEEDS_BY_SUBURB[a.id] = a.needs.slice(0, 5).map(n => ({
+            need: n.label,
+            pct:  n.pct,
+            n:    n.n,
+          }));
+        }
+        touched = true;
+      }
+
+      // 3. MOOD_PULSE — merge counts/pct in by key, preserve colour + label.
+      if (Array.isArray(window.MOOD_PULSE) && Array.isArray(data.mood_pulse)) {
+        const moodByKey = Object.fromEntries(data.mood_pulse.map(m => [m.key, m]));
+        for (const m of window.MOOD_PULSE) {
+          const live = moodByKey[m.key];
+          if (live) {
+            m.n   = live.n;
+            m.pct = live.pct;
+            touched = true;
+          }
+        }
+      }
+
+      // 4. SPECIALISTS — replace items in place by id (preserves array ref).
+      if (Array.isArray(window.SPECIALISTS) && Array.isArray(data.specialists)) {
+        window.SPECIALISTS.length = 0;
+        for (const sp of data.specialists) {
+          window.SPECIALISTS.push({
+            id:       sp.id,
+            name:     sp.name,
+            phone:    sp.phone,
+            desc:     sp.description,
+            handoffs: sp.handoffs,
+            delta:    sp.delta,
+          });
+        }
+        touched = true;
+      }
+
+      // 5. RECENT_PHRASES — replace contents, map mood_key → sent.
+      if (Array.isArray(window.RECENT_PHRASES) && Array.isArray(data.phrases)) {
+        window.RECENT_PHRASES.length = 0;
+        for (const p of data.phrases) {
+          window.RECENT_PHRASES.push({
+            text: p.text,
+            sent: p.mood_key,
+            n:    p.n,
+          });
+        }
+        touched = true;
+      }
+
       if (touched) setLiveTick((t) => t + 1);
     }).catch((err) => {
       console.warn('[NP] council dashboard fetch failed; showing hardcoded values:', err.message);

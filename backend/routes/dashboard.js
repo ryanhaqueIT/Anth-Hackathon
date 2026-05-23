@@ -30,6 +30,8 @@ function recommendedAction(gap, topNeed) {
 router.get('/areas', (req, res, next) => {
   try {
     const areas = db.prepare('SELECT * FROM areas').all();
+    const needTypes = db.prepare('SELECT id, label FROM need_types').all();
+    const needLabelById = Object.fromEntries(needTypes.map(n => [n.id, n.label]));
 
     const rows = areas.map(area => {
       const totalCheckins = db
@@ -40,14 +42,22 @@ router.get('/areas', (req, res, next) => {
         .prepare('SELECT COUNT(*) AS c FROM support_services WHERE area_id = ?')
         .get(area.id).c;
 
-      const topNeedRow = db.prepare(`
+      // Full needs breakdown — drives the side-panel "Top needs raised" list.
+      const needRows = db.prepare(`
         SELECT need_type_id, COUNT(*) AS n
           FROM checkins
          WHERE area_id = ?
          GROUP BY need_type_id
          ORDER BY n DESC
-         LIMIT 1
-      `).get(area.id);
+      `).all(area.id);
+
+      const needsTotal = needRows.reduce((s, r) => s + r.n, 0) || 1;
+      const needs = needRows.map(r => ({
+        need_type_id: r.need_type_id,
+        label: needLabelById[r.need_type_id] || r.need_type_id || 'General support',
+        n: r.n,
+        pct: Math.round((100 * r.n) / needsTotal),
+      }));
 
       const isolationRow = db.prepare(`
         SELECT COUNT(*) AS n FROM checkins
@@ -80,7 +90,8 @@ router.get('/areas', (req, res, next) => {
         pop_65_pct: area.pop_65_pct,
         total_checkins: totalCheckins,
         service_count: serviceCount,
-        top_need: topNeedRow ? topNeedRow.need_type_id : null,
+        top_need: needs[0] ? needs[0].need_type_id : null,
+        needs,
         isolation_signal_pct: isolationPct,
         mood_distribution: moodCounts.reduce((acc, r) => {
           if (r.mood) acc[r.mood] = r.n;
@@ -88,17 +99,49 @@ router.get('/areas', (req, res, next) => {
         }, {}),
         gap_score: Math.round(gap),
         gap_band: bandLabel(gap),
-        recommended_action: recommendedAction(gap, topNeedRow ? topNeedRow.need_type_id : null),
+        recommended_action: recommendedAction(gap, needs[0] ? needs[0].need_type_id : null),
       };
     });
 
     rows.sort((a, b) => b.gap_score - a.gap_score);
 
+    // ─── City-wide mood pulse ──────────────────────────────────────────────
+    // Aggregated count + percentage per mood bucket. Frontend keeps the
+    // colour/label/desc by key; we only ship the numbers.
+    const moodRows = db.prepare(`
+      SELECT mood, COUNT(*) AS n FROM checkins WHERE mood IS NOT NULL GROUP BY mood
+    `).all();
+    const moodTotal = moodRows.reduce((s, r) => s + r.n, 0) || 1;
+    const moodPulse = ['steady', 'reflective', 'concerned', 'distressed'].map((key) => {
+      const row = moodRows.find(r => r.mood === key);
+      const n = row ? row.n : 0;
+      return { key, n, pct: Math.round((100 * n) / moodTotal) };
+    });
+
+    // ─── Specialists ───────────────────────────────────────────────────────
+    const specialists = db
+      .prepare('SELECT id, name, phone, description, handoffs, prev_handoffs FROM specialists ORDER BY handoffs DESC')
+      .all()
+      .map(s => {
+        const diff = (s.handoffs || 0) - (s.prev_handoffs || 0);
+        const delta = diff > 0 ? `+${diff} vs prior` : diff < 0 ? `${diff} vs prior` : '0';
+        return { ...s, delta };
+      });
+
+    // ─── Recurring phrases (k-anonymous) ───────────────────────────────────
+    const phrases = db
+      .prepare('SELECT id, area_id, text, mood_key, n FROM recurring_phrases ORDER BY n DESC')
+      .all();
+
     res.json({
       areas: rows,
+      mood_pulse: moodPulse,
+      specialists,
+      phrases,
       meta: {
         total_checkins: rows.reduce((s, r) => s + r.total_checkins, 0),
         total_services: rows.reduce((s, r) => s + r.service_count, 0),
+        total_handoffs: specialists.reduce((s, r) => s + (r.handoffs || 0), 0),
         generated_at: new Date().toISOString(),
       },
     });

@@ -2,7 +2,7 @@
 
 **Keep this file in sync with `AGENTS.md` and `.github/copilot-instructions.md`. If you edit one, edit all three. The substantive rules below are identical across all three; only the framing differs.**
 
-A community engagement prototype built for the Anthropic hackathon. The frontend lives in `Neighbourhood Pulse/` (React JSX, exported from a visual design tool). The product specification lives in `PRD.docx`; the data model lives in `ERD.docx`.
+A community wellbeing companion built for the Anthropic Impact Lab. The frontend lives in `frontend/` (React 18 via CDN, no build step). The Express backend lives in `backend/`. An MCP server for the voice-companion side lives in `mcp-server/`. Product and data-model context is captured under `docs/`.
 
 ## THE RULE
 

@@ -469,33 +469,172 @@ function CallTimer() {
 }
 
 // ─── SCREEN: voice listening ────────────────────────────────────────────
-const TRANSCRIPT_FULL = "I think I’d like a quiet cup of tea with someone this afternoon";
-function ScreenListening({ onDone }) {
-  const [chars, setChars] = React.useState(0);
-  React.useEffect(() => {
-    if (chars >= TRANSCRIPT_FULL.length) {
-      const end = setTimeout(onDone, 900);
-      return () => clearTimeout(end);
-    }
-    const step = setTimeout(() => setChars((n) => Math.min(n + 2, TRANSCRIPT_FULL.length)), 60);
-    return () => clearTimeout(step);
-  }, [chars, onDone]);
+// Real STT path: getUserMedia → MediaRecorder → POST /api/transcribe →
+// ElevenLabs scribe_v1 (server-side). The canned phrase is kept only as a
+// last-resort fallback when the mic, the network, or the API key is missing
+// so the prototype still tells a story offline.
+const FALLBACK_TRANSCRIPT = "I think I’d like a quiet cup of tea with someone this afternoon";
 
-  const text = TRANSCRIPT_FULL.slice(0, chars);
+// Pick a MIME type the current browser actually supports. webm/opus is the
+// broadest; mp4/aac is the Safari fallback.
+function pickRecorderMime() {
+  if (typeof MediaRecorder === 'undefined') return null;
+  const candidates = [
+    'audio/webm;codecs=opus',
+    'audio/webm',
+    'audio/mp4;codecs=mp4a.40.2',
+    'audio/mp4',
+    'audio/ogg;codecs=opus',
+  ];
+  for (const t of candidates) {
+    if (MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(t)) return t;
+  }
+  return '';
+}
+
+function ScreenListening({ onDone }) {
+  // phase: 'starting' | 'recording' | 'transcribing' | 'error'
+  const [phase, setPhase] = React.useState('starting');
+  const [transcript, setTranscript] = React.useState('');
+  const [error, setError] = React.useState(null);
+  const recorderRef = React.useRef(null);
+  const chunksRef = React.useRef([]);
+  const streamRef = React.useRef(null);
+  const mimeRef = React.useRef('');
+  const cancelledRef = React.useRef(false);
+
+  React.useEffect(() => {
+    cancelledRef.current = false;
+
+    async function start() {
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia || typeof MediaRecorder === 'undefined') {
+        setError('Your browser does not support microphone recording.');
+        setPhase('error');
+        return;
+      }
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        if (cancelledRef.current) { stream.getTracks().forEach((t) => t.stop()); return; }
+        streamRef.current = stream;
+        const mime = pickRecorderMime();
+        mimeRef.current = mime || 'audio/webm';
+        const rec = mime ? new MediaRecorder(stream, { mimeType: mime }) : new MediaRecorder(stream);
+        recorderRef.current = rec;
+        chunksRef.current = [];
+        rec.ondataavailable = (e) => { if (e.data && e.data.size > 0) chunksRef.current.push(e.data); };
+        rec.onstop = handleStop;
+        rec.start();
+        setPhase('recording');
+      } catch (e) {
+        console.warn('[NP voice] mic permission/start failed:', e);
+        setError(e && e.name === 'NotAllowedError'
+          ? 'Microphone access was blocked. You can still type, or try again.'
+          : 'Could not start the microphone.');
+        setPhase('error');
+      }
+    }
+    start();
+
+    return () => {
+      cancelledRef.current = true;
+      try {
+        if (recorderRef.current && recorderRef.current.state === 'recording') {
+          recorderRef.current.onstop = null;
+          recorderRef.current.stop();
+        }
+      } catch {}
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach((t) => t.stop());
+        streamRef.current = null;
+      }
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  async function handleStop() {
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((t) => t.stop());
+      streamRef.current = null;
+    }
+    const blob = new Blob(chunksRef.current, { type: mimeRef.current || 'audio/webm' });
+    chunksRef.current = [];
+
+    if (blob.size < 1000) {
+      // <~1KB of audio = silence or aborted tap. Don't bill the API; fall
+      // back so the flow still demonstrates end-to-end.
+      onDone(FALLBACK_TRANSCRIPT, { source: 'fallback', reason: 'too_short' });
+      return;
+    }
+
+    setPhase('transcribing');
+    try {
+      if (!window.NPApi || !window.NPApi.transcribeAudio) throw new Error('NPApi.transcribeAudio missing');
+      const ext = mimeRef.current.includes('mp4') ? 'm4a'
+                : mimeRef.current.includes('ogg') ? 'ogg'
+                :                                   'webm';
+      const result = await window.NPApi.transcribeAudio(blob, `checkin.${ext}`);
+      const text = (result && result.text) ? result.text : '';
+      if (!text) {
+        onDone(FALLBACK_TRANSCRIPT, { source: 'fallback', reason: 'empty_transcript' });
+        return;
+      }
+      setTranscript(text);
+      // Brief pause so the resident sees what was heard before transitioning.
+      setTimeout(() => onDone(text, { source: 'elevenlabs', model: result.model, duration_sec: result.duration_sec }), 700);
+    } catch (e) {
+      console.warn('[NP voice] transcription failed:', e);
+      if (e && e.code === 'no_api_key') {
+        onDone(FALLBACK_TRANSCRIPT, { source: 'fallback', reason: 'no_api_key' });
+      } else {
+        setError('I could not catch that. Using a quick fallback for now.');
+        setPhase('error');
+        setTimeout(() => onDone(FALLBACK_TRANSCRIPT, { source: 'fallback', reason: 'api_error' }), 900);
+      }
+    }
+  }
+
+  function stopRecording() {
+    if (recorderRef.current && recorderRef.current.state === 'recording') {
+      recorderRef.current.stop(); // triggers handleStop()
+    }
+  }
+
+  const label = phase === 'starting'     ? 'Getting the microphone ready…'
+              : phase === 'recording'    ? 'I’m listening, take your time…'
+              : phase === 'transcribing' ? 'Just a moment — writing that down…'
+              :                            (error || 'Something went wrong.');
+
+  const ctaText = phase === 'transcribing' ? 'Transcribing…'
+                : phase === 'error'        ? 'Skip and continue'
+                :                            'Tap when you’re done';
+
+  const ctaDisabled = phase === 'starting' || phase === 'transcribing';
+
+  function onCta() {
+    if (phase === 'recording') stopRecording();
+    else if (phase === 'error') onDone(FALLBACK_TRANSCRIPT, { source: 'fallback', reason: 'user_skip' });
+  }
+
   return (
     <div className="resident listening">
-      <ResidentTop right={<div style={{ fontSize: '0.85rem', color: 'var(--ink-3)' }}>Listening · Carlton</div>}/>
+      <ResidentTop right={<div style={{ fontSize: '0.85rem', color: 'var(--ink-3)' }}>
+        {phase === 'recording' ? 'Listening · Carlton' : phase === 'transcribing' ? 'Transcribing…' : 'Voice · Carlton'}
+      </div>}/>
       <div className="listen-stage">
-        <div className="waveform" aria-hidden="true">
+        <div className={`waveform ${phase}`} aria-hidden="true">
           {Array.from({ length: 13 }).map((_, i) => <div key={i} className="bar"/>)}
         </div>
-        <div className="listen-label">I’m listening, take your time…</div>
+        <div className="listen-label">{label}</div>
         <div className="live-transcript">
-          {text}<span className="caret">|</span>
+          {transcript || (phase === 'recording' ? ' ' : '')}
+          {phase === 'recording' && <span className="caret">|</span>}
         </div>
-        <button className="stop-btn" onClick={onDone}>
-          <span style={{ width: 10, height: 10, borderRadius: 2, background: 'var(--clay)' }}></span>
-          Tap when you’re done
+        <button className="stop-btn" onClick={onCta} disabled={ctaDisabled} style={ctaDisabled ? { opacity: 0.55, cursor: 'default' } : null}>
+          <span style={{
+            width: 10, height: 10, borderRadius: phase === 'recording' ? 2 : '50%',
+            background: phase === 'error' ? 'var(--gold)' : 'var(--clay)',
+          }}></span>
+          {ctaText}
         </button>
       </div>
     </div>
@@ -775,9 +914,12 @@ function ResidentApp() {
           {screen === 'saved'       && <ScreenSaved       rec={selectedRec} onDone={() => setScreen('checkin')}/>}
           {screen === 'support'     && <ScreenSupport     onPick={(s) => { setSelectedSpec(s); setScreen('calling'); }} onStay={() => setScreen('breathing')} onBack={() => setScreen('checkin')}/>}
           {screen === 'calling'     && <ScreenCalling     spec={selectedSpec} onEnd={() => setScreen('support')} onStay={() => setScreen('breathing')}/>}
-          {screen === 'listening'   && <ScreenListening   onDone={() => {
+          {screen === 'listening'   && <ScreenListening   onDone={(transcript, meta) => {
+            // transcript is the live ElevenLabs result (or the canned
+            // fallback when mic/API is unavailable — meta.source tells us).
+            console.log('[NP voice] transcript:', transcript, meta);
             setMood('lonely');
-            submitToBackend('lonely', TRANSCRIPT_FULL, 'voice');
+            submitToBackend('lonely', transcript || FALLBACK_TRANSCRIPT, 'voice');
             setScreen('recs');
           }}/>}
           {screen === 'breathing'   && <ScreenBreathing   onDone={() => setScreen('checkin')}/>}

@@ -84,6 +84,26 @@ const SUPPORT_SERVICES = [
   { id: 's_beyondblue', name: 'Beyond Blue', category_id: 'wellbeing', area_id: 'carlton', address: 'Phone', distance_km: 0.0, cost: 'Free', accessibility: 'phone_support,24_7', opening_hours: '24/7', next_session: 'Anytime', contact: '1300 22 4636', description: 'Mental-health support phone or web chat, 24/7.' },
 ];
 
+// Specialist helplines the companion can route distressed residents to.
+// handoffs / prev_handoffs feed the dashboard's referral panel and delta.
+const SPECIALISTS = [
+  { id: 'lifeline',   name: 'Lifeline',     phone: '13 11 14',     description: "Free, anytime, confidential. They'll listen — no pressure.",   handoffs: 31, prev_handoffs: 23 },
+  { id: 'beyondblue', name: 'Beyond Blue',  phone: '1300 22 4636', description: 'Mental-health support, 24/7. Phone or web chat.',             handoffs: 18, prev_handoffs: 15 },
+  { id: 'griefline',  name: 'Griefline',    phone: '1300 845 745', description: 'Companion line for grief and loss. Daytime hours, free.',     handoffs:  7, prev_handoffs:  5 },
+  { id: 'respect',    name: '1800RESPECT',  phone: '1800 737 732', description: 'Confidential support for family, domestic or sexual violence.', handoffs: 3, prev_handoffs:  3 },
+];
+
+// k-anonymous paraphrased phrase clusters. area_id NULL = city-wide.
+// mood_key matches the four mood pulse buckets.
+const RECURRING_PHRASES = [
+  { area_id: 'carlton', text: 'The house has been so quiet since Bill passed.',     mood_key: 'concerned',  n: 12 },
+  { area_id: 'carlton', text: "I'd love to walk with someone again.",               mood_key: 'reflective', n: 18 },
+  { area_id: 'carlton', text: "There's no one to share a meal with most evenings.", mood_key: 'concerned',  n: 14 },
+  { area_id: 'carlton', text: "I don't see the point of getting up some mornings.", mood_key: 'distressed', n:  6 },
+  { area_id: 'carlton', text: 'The bus is too far for me to manage now.',           mood_key: 'concerned',  n:  9 },
+  { area_id: 'carlton', text: 'I quite like a cup of tea with the volunteers.',     mood_key: 'steady',     n: 21 },
+];
+
 // Mock check-ins so the council dashboard reads non-empty on first load.
 // Counts roughly match data.js gap/checkins ratios.
 const MOCK_CHECKINS = [
@@ -122,33 +142,103 @@ const MOCK_CHECKINS = [
   { area: 'docklands', mood: 'reflective',need: 'social_connection', text: 'Where are the older-resident groups around here?' },
 ];
 
+function isEmpty(db, table) {
+  return db.prepare(`SELECT COUNT(*) AS c FROM ${table}`).get().c === 0;
+}
+
+// Idempotent per-table: each block only fires when its table is empty, so
+// running the seed against a DB that already has services (but is missing the
+// newer specialists / phrases tables) backfills cleanly.
 function seed(db) {
-  const insertCat     = db.prepare('INSERT INTO service_categories (id, label) VALUES (?, ?)');
-  const insertNeed    = db.prepare('INSERT INTO need_types (id, label, keywords) VALUES (?, ?, ?)');
-  const insertArea    = db.prepare('INSERT INTO areas (id, name, postcode, centroid_lat, centroid_lon, pop_65_pct, social_index) VALUES (?, ?, ?, ?, ?, ?, ?)');
-  const insertService = db.prepare(`
+  const insertCat        = db.prepare('INSERT INTO service_categories (id, label) VALUES (?, ?)');
+  const insertNeed       = db.prepare('INSERT INTO need_types (id, label, keywords) VALUES (?, ?, ?)');
+  const insertArea       = db.prepare('INSERT INTO areas (id, name, postcode, centroid_lat, centroid_lon, pop_65_pct, social_index) VALUES (?, ?, ?, ?, ?, ?, ?)');
+  const insertService    = db.prepare(`
     INSERT INTO support_services
       (id, name, category_id, area_id, address, distance_km, cost, accessibility, opening_hours, next_session, contact, description)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `);
-  const insertCheckin = db.prepare(`
+  const insertCheckin    = db.prepare(`
     INSERT INTO checkins
       (id, area_id, age_band, mood, free_text, need_type_id, input_channel, consent)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?)
   `);
+  const insertSpecialist = db.prepare(`
+    INSERT INTO specialists
+      (id, name, phone, description, handoffs, prev_handoffs)
+    VALUES (?, ?, ?, ?, ?, ?)
+  `);
+  const insertPhrase     = db.prepare(`
+    INSERT INTO recurring_phrases
+      (id, area_id, text, mood_key, n)
+    VALUES (?, ?, ?, ?, ?)
+  `);
 
   const tx = db.transaction(() => {
-    for (const c of SERVICE_CATEGORIES) insertCat.run(c.id, c.label);
-    for (const n of NEED_TYPES)         insertNeed.run(n.id, n.label, n.keywords);
-    for (const a of AREAS)              insertArea.run(a.id, a.name, a.postcode, a.centroid_lat, a.centroid_lon, a.pop_65_pct, a.social_index);
-    for (const s of SUPPORT_SERVICES) {
-      insertService.run(s.id, s.name, s.category_id, s.area_id, s.address, s.distance_km, s.cost, s.accessibility, s.opening_hours, s.next_session, s.contact, s.description);
+    if (isEmpty(db, 'service_categories')) {
+      for (const c of SERVICE_CATEGORIES) insertCat.run(c.id, c.label);
     }
-    for (const c of MOCK_CHECKINS) {
-      insertCheckin.run(randomUUID(), c.area, '65+', c.mood, c.text, c.need, 'text', 1);
+    if (isEmpty(db, 'need_types')) {
+      for (const n of NEED_TYPES) insertNeed.run(n.id, n.label, n.keywords);
+    }
+    if (isEmpty(db, 'areas')) {
+      for (const a of AREAS) insertArea.run(a.id, a.name, a.postcode, a.centroid_lat, a.centroid_lon, a.pop_65_pct, a.social_index);
+    }
+    if (isEmpty(db, 'support_services')) {
+      for (const s of SUPPORT_SERVICES) {
+        insertService.run(s.id, s.name, s.category_id, s.area_id, s.address, s.distance_km, s.cost, s.accessibility, s.opening_hours, s.next_session, s.contact, s.description);
+      }
+    }
+    if (isEmpty(db, 'checkins')) {
+      for (const c of MOCK_CHECKINS) {
+        insertCheckin.run(randomUUID(), c.area, '65+', c.mood, c.text, c.need, 'text', 1);
+      }
+    }
+    if (isEmpty(db, 'specialists')) {
+      for (const s of SPECIALISTS) insertSpecialist.run(s.id, s.name, s.phone, s.description, s.handoffs, s.prev_handoffs);
+    }
+    if (isEmpty(db, 'recurring_phrases')) {
+      for (const p of RECURRING_PHRASES) insertPhrase.run(randomUUID(), p.area_id, p.text, p.mood_key, p.n);
     }
   });
   tx();
 }
 
-module.exports = { seed, SERVICE_CATEGORIES, NEED_TYPES, AREAS, SUPPORT_SERVICES, MOCK_CHECKINS };
+module.exports = { seed, SERVICE_CATEGORIES, NEED_TYPES, AREAS, SUPPORT_SERVICES, MOCK_CHECKINS, SPECIALISTS, RECURRING_PHRASES };
+
+// ─── CLI entry point ──────────────────────────────────────────────────────
+// Usage:
+//   node seed.js              # idempotent: seeds only empty tables
+//   node seed.js --force      # wipes data.sqlite then seeds from scratch
+//   NP_DB_PATH=/tmp/foo.sqlite node seed.js
+if (require.main === module) {
+  const fs = require('fs');
+  const path = require('path');
+  const Database = require('better-sqlite3');
+
+  const force = process.argv.includes('--force');
+  const DB_PATH = process.env.NP_DB_PATH || path.join(__dirname, 'data.sqlite');
+  const SCHEMA_PATH = path.join(__dirname, 'schema.sql');
+
+  if (force) {
+    for (const ext of ['', '-wal', '-shm']) {
+      const p = DB_PATH + ext;
+      if (fs.existsSync(p)) fs.unlinkSync(p);
+    }
+    console.log(`[seed] wiped ${DB_PATH}`);
+  }
+
+  const db = new Database(DB_PATH);
+  db.pragma('journal_mode = WAL');
+  db.pragma('foreign_keys = ON');
+  db.exec(fs.readFileSync(SCHEMA_PATH, 'utf8'));
+
+  seed(db);
+
+  const counts = ['areas', 'service_categories', 'need_types', 'support_services', 'checkins', 'specialists', 'recurring_phrases']
+    .map((t) => `${t}=${db.prepare(`SELECT COUNT(*) AS c FROM ${t}`).get().c}`)
+    .join(' ');
+  console.log(`[seed] ${DB_PATH}`);
+  console.log(`[seed] ${counts}`);
+  db.close();
+}

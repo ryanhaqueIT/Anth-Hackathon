@@ -1,89 +1,51 @@
 {
   "version": 1,
-  "timestamp": "2026-05-23T04:04:19.123826Z",
-  "run_id": 1,
+  "timestamp": "2026-05-23T05:01:06.221493Z",
+  "run_id": 2,
   "status": "failed",
-  "duration_ms": 16079,
+  "duration_ms": 34185,
   "gates": {
     "B1": {
-      "status": "skipped",
-      "name": "Lint",
+      "status": "failed",
+      "name": "ESLint",
       "layer": 1,
-      "duration_ms": 0,
+      "duration_ms": 30135,
       "findings": 0,
-      "details": [
-        "no backend directory"
-      ]
+      "details": []
     },
     "B2": {
-      "status": "skipped",
-      "name": "Format",
+      "status": "failed",
+      "name": "Prettier",
       "layer": 1,
-      "duration_ms": 0,
+      "duration_ms": 2394,
       "findings": 0,
-      "details": [
-        "no backend directory"
-      ]
+      "details": []
     },
     "B3": {
-      "status": "skipped",
-      "name": "Tests",
+      "status": "failed",
+      "name": "TypeScript",
       "layer": 3,
-      "duration_ms": 0,
+      "duration_ms": 522,
       "findings": 0,
-      "details": [
-        "no backend directory"
-      ]
+      "details": []
     },
     "B4": {
       "status": "skipped",
-      "name": "Import Boundaries",
+      "name": "Tests",
       "layer": 2,
       "duration_ms": 0,
       "findings": 0,
       "details": [
-        "no backend directory"
+        "no test script in package.json"
       ]
     },
     "B5": {
-      "status": "skipped",
-      "name": "Golden Principles",
+      "status": "failed",
+      "name": "Import boundaries",
       "layer": 2,
-      "duration_ms": 0,
+      "duration_ms": 17,
       "findings": 0,
-      "details": [
-        "no backend directory"
-      ]
-    },
-    "B6": {
-      "status": "skipped",
-      "name": "Architecture",
-      "layer": 2,
-      "duration_ms": 0,
-      "findings": 0,
-      "details": [
-        "no backend directory"
-      ]
-    },
-    "B7": {
-      "status": "skipped",
-      "name": "Type Check",
-      "layer": 2,
-      "duration_ms": 0,
-      "findings": 0,
-      "details": [
-        "no backend directory"
-      ]
-    },
-    "B8": {
-      "status": "skipped",
-      "name": "Wiring",
-      "layer": 2,
-      "duration_ms": 0,
-      "findings": 0,
-      "details": [
-        "no backend directory"
-      ]
+      "details": []
     },
     "F1": {
       "status": "skipped",
@@ -179,7 +141,7 @@
       "status": "passed",
       "name": "Doc cross-refs",
       "layer": 7,
-      "duration_ms": 357,
+      "duration_ms": 24,
       "findings": 0,
       "details": []
     },
@@ -187,7 +149,7 @@
       "status": "passed",
       "name": "No secrets",
       "layer": 7,
-      "duration_ms": 911,
+      "duration_ms": 120,
       "findings": 0,
       "details": []
     },
@@ -225,7 +187,7 @@
       "status": "failed",
       "name": "Feature list (PRD gate)",
       "layer": 7,
-      "duration_ms": 611,
+      "duration_ms": 44,
       "findings": 0,
       "details": []
     },
@@ -243,15 +205,15 @@
       "status": "failed",
       "name": "Spec compliance (evidence traceability)",
       "layer": 7,
-      "duration_ms": 559,
+      "duration_ms": 54,
       "findings": 0,
       "details": []
     },
     "R1": {
-      "status": "passed",
+      "status": "failed",
       "name": "Ratchet (quality baseline)",
       "layer": 7,
-      "duration_ms": 773,
+      "duration_ms": 17,
       "findings": 0,
       "details": []
     }

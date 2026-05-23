@@ -2,7 +2,7 @@
 
 **Keep this file in sync with `AGENTS.md` and `CLAUDE.md`. The substantive rules below are identical across all three.**
 
-A community engagement prototype (Neighbourhood Pulse) for the Anthropic hackathon. Frontend in `Neighbourhood Pulse/` (React JSX, no build setup yet). Spec in `PRD.docx`; data model in `ERD.docx`.
+A community wellbeing companion (Neighbourhood Pulse) built for the Anthropic Impact Lab. Frontend in `frontend/` (React 18 via CDN). Backend in `backend/` (Express + SQLite). Voice-companion MCP server in `mcp-server/` (Cloudflare Workers).
 
 ## THE RULE
 
@@ -27,7 +27,7 @@ Build/test/lint commands are not yet defined — Copilot should not suggest `npm
 
 ## Module Structure
 
-Single flat layer at `Neighbourhood Pulse/components/` (React JSX). No layered architecture is enforced yet. Copilot may freely cross-import between component files.
+Single flat layer at `frontend/components/` (React JSX). No layered architecture is enforced yet. Copilot may freely cross-import between component files.
 
 ## Golden Principles
 

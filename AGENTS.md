@@ -1,6 +1,6 @@
 # Anth-Hackathon — Neighbourhood Pulse
 
-A community engagement prototype built for the Anthropic hackathon. The frontend lives in `Neighbourhood Pulse/` (React JSX, exported from a visual design tool). The product specification lives in `PRD.docx`; the data model lives in `ERD.docx`. A build pipeline, backend, and CI workflow have not yet been added — the harness will skip those gates until they exist.
+A community wellbeing companion built for the Anthropic Impact Lab. The frontend lives in `frontend/` (React 18 via CDN, no build step). The Express backend lives in `backend/`. An MCP server for the voice-companion side lives in `mcp-server/`. Product and data-model context is captured under `docs/`.
 
 ## THE RULE
 
@@ -35,27 +35,37 @@ You may not say "done", "complete", "implemented", or "finished" without showing
 
 ```
 Anth-Hackathon/
-├── ERD.docx                       data model (current: final version)
-├── PRD.docx                       product spec
-├── Neighbourhood Pulse/           frontend prototype (React JSX)
-│   ├── Neighbourhood Pulse.html   top-level HTML scaffold
+├── frontend/                      resident + council UI (React 18 via CDN, no build)
+│   ├── index.html                 top-level HTML scaffold
 │   ├── styles.css                 global stylesheet
-│   ├── .design-canvas.state.json  design tool state file
-│   ├── components/                React components (no build setup yet)
-│   │   ├── main.jsx
-│   │   ├── design-canvas.jsx
-│   │   ├── resident-app.jsx
-│   │   ├── council-dashboard.jsx
-│   │   ├── browser-window.jsx
-│   │   ├── tweaks-panel.jsx
-│   │   └── data.js
-│   └── uploads/                   bundled assets (duplicate PRD/ERD)
-├── scripts/                       harness gates (validate.sh entry point)
-├── .claude/                       Claude Code hooks, slash commands, settings
-├── .harness/feature_list.json     PRD enforcement checklist
-├── docs/                          design docs, exec plans, references
+│   ├── api.js                     window.NPApi.* — fetch wrapper around /api
+│   └── components/                React components
+│       ├── main.jsx
+│       ├── app-shell.jsx
+│       ├── design-canvas.jsx
+│       ├── resident-app.jsx
+│       ├── council-dashboard.jsx
+│       ├── browser-window.jsx
+│       ├── tweaks-panel.jsx
+│       └── data.js
+├── backend/                       Express + better-sqlite3 (Node.js)
+│   ├── server.js                  serves frontend at / and API at /api/*
+│   ├── routes/                    checkins, services, dashboard, transcribe
+│   ├── db.js                      schema bootstrap, query helpers
+│   ├── schema.sql                 SQLite DDL
+│   └── seed.js                    suburb + service seed data
+├── mcp-server/                    Cloudflare Worker MCP server (TypeScript)
+│   ├── src/server.ts              GroundupMCP — McpAgent on Workers
+│   ├── src/tools/                 seven elder-companion tools (zod schemas)
+│   ├── DATASETS.md                shortlist of relevant COM + VIC open data
+│   └── wrangler.jsonc
+├── data/                          fetch.sh + JSON snapshots (gitignored content)
+├── docs/                          design docs, exec plans, FRONTEND/SECURITY/etc
 ├── agents/                        agent definitions (planner, reviewer, etc.)
-└── observability/                 vector.toml for log/metric stack
+├── scripts/                       harness gates (validate.sh entry point)
+├── observability/                 vector.toml for log/metric stack
+├── .claude/                       Claude Code hooks, slash commands, settings
+└── .harness/feature_list.json     PRD enforcement checklist
 ```
 
 ## Commands
@@ -67,7 +77,7 @@ python3 scripts/ratchet.py             # Quality regression check
 python3 scripts/check_features.py      # Feature list status
 ```
 
-Build/test/lint commands are TBD. To engage the frontend gates (F1–F7), either rename `Neighbourhood Pulse/` to `frontend/` and add a `package.json`, or add a build/test/lint pipeline matching your chosen framework. The most direct path is Vite + React (see `docs/FRONTEND.md`).
+Build/test/lint commands are TBD. The frontend has no build step (CDN React + in-browser Babel). To engage the frontend gates (F1–F7), add a `frontend/package.json` and the corresponding lint/test pipeline; Vite + React is the most direct path (see `docs/FRONTEND.md`).
 
 ## Module Dependency Rules
 

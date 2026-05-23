@@ -88,3 +88,26 @@ CREATE TABLE IF NOT EXISTS area_insights (
   recommended_action   TEXT,
   refreshed_at         TEXT DEFAULT (datetime('now'))
 );
+
+-- Specialist helplines surfaced when distressed language is detected.
+-- Handoff counts feed the council dashboard's referral panel.
+CREATE TABLE IF NOT EXISTS specialists (
+  id              TEXT PRIMARY KEY,
+  name            TEXT NOT NULL,
+  phone           TEXT,
+  description     TEXT,
+  handoffs        INTEGER DEFAULT 0,
+  prev_handoffs   INTEGER DEFAULT 0
+);
+
+-- k-anonymous paraphrased phrase clusters surfaced on the suburb drill-in.
+-- area_id NULL = city-wide; mood_key matches the four mood pulse buckets.
+CREATE TABLE IF NOT EXISTS recurring_phrases (
+  id              TEXT PRIMARY KEY,
+  area_id         TEXT REFERENCES areas(id),
+  text            TEXT NOT NULL,
+  mood_key        TEXT NOT NULL,
+  n               INTEGER DEFAULT 0
+);
+
+CREATE INDEX IF NOT EXISTS idx_phrases_area ON recurring_phrases(area_id);

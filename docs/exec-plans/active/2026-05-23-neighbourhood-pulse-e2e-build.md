@@ -12,17 +12,17 @@ The ERD's section 12 build plan lists five phases: Data setup → Resident inter
 
 ## Architecture decision: preserve CDN-Babel frontend
 
-`Neighbourhood Pulse.html` loads React 18.3, ReactDOM, and `@babel/standalone` from unpkg, then loads JSX components via `<script type="text/babel">`. Components communicate via `window.*` globals (no ES modules). This works without any bundler — open the HTML and it runs.
+`frontend/index.html` loads React 18.3, ReactDOM, and `@babel/standalone` from unpkg, then loads JSX components via `<script type="text/babel">`. Components communicate via `window.*` globals (no ES modules). This works without any bundler — open the HTML and it runs.
 
 Migrating to Vite would require refactoring eight JSX files to remove `window.*` globals and add ES imports. At hackathon pace, the return on that work is poor. We **keep the frontend exactly as-is** and add only one new file (`api.js`) that registers `window.NPApi` for the components to call.
 
 ## Architecture decision: one Express process serves everything
 
-The Express backend mounts the API at `/api/*` AND serves the existing `Neighbourhood Pulse_interactive/` folder as static files at `/`. One process, one port, no CORS, one `npm start` command.
+The Express backend mounts the API at `/api/*` AND serves the existing `frontend/` folder as static files at `/`. One process, one port, no CORS, one `npm start` command.
 
 ## Phases
 
-1. **Skeleton** — `backend/package.json`, `server.js`, `db.js`, `schema.sql`, `Neighbourhood Pulse_interactive/api.js`, and this plan doc.
+1. **Skeleton** — `backend/package.json`, `server.js`, `db.js`, `schema.sql`, `frontend/api.js`, and this plan doc.
 2. **Schema + seed** — 8 SQLite tables (`areas`, `service_categories`, `support_services`, `need_types`, `residents`, `checkins`, `recommendations`, `area_insights`). Seed from `data.js`'s `SUBURBS` and `SERVICES`, plus need-type taxonomy from ERD §FR3.
 3. **Routes + logic** — `POST /api/checkins`, `GET /api/services`, `GET /api/dashboard/areas`. Rule-based need classifier (keyword match, per ERD §FR3) and scored recommender (weights from ERD §FR5: category 40%, distance 25%, cost 20%, accessibility 15%).
 4. **Frontend wiring** — `resident-app.jsx` calls `window.NPApi.submitCheckin()` on submit; `council-dashboard.jsx` calls `window.NPApi.getDashboard()` on mount with a try/catch fallback to the existing hardcoded `SUBURBS`/`SERVICES`.
@@ -40,8 +40,6 @@ The Express backend mounts the API at `/api/*` AND serves the existing `Neighbou
 
 ## Out of scope for this plan
 
-- Folder rename of `Neighbourhood Pulse_interactive/` → `frontend/` (deferred — too disruptive mid-build)
-- Removal of the stale `Neighbourhood Pulse/` directory (cosmetic cleanup; do in a separate commit)
 - Migration to Vite/npm React (intentionally avoided per architecture decision above)
 - Authentication / consent UI flow (ERD says "full authentication system: out of scope")
 - Actual voice input (ERD says "voice complexity: MVP can simulate voice with text first")

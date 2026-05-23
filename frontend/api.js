@@ -1,5 +1,5 @@
 // Neighbourhood Pulse — frontend API client.
-// Loaded BEFORE the component scripts in Neighbourhood Pulse.html so that
+// Loaded BEFORE the component scripts in index.html so that
 // components can use window.NPApi.* synchronously.
 //
 // Every call returns a Promise. Callers that want graceful degradation when
@@ -47,6 +47,23 @@
     return _fetchJson('/health');
   }
 
+  // Send a recorded audio Blob to /api/transcribe (ElevenLabs scribe_v1 on
+  // the server). Returns { text, language, duration_sec, model }. Throws on
+  // network failure or non-2xx; callers should catch and degrade gracefully.
+  async function transcribeAudio(blob, filename) {
+    const fd = new FormData();
+    fd.append('audio', blob, filename || 'recording.webm');
+    const res = await fetch(`${API_BASE}/transcribe`, { method: 'POST', body: fd });
+    const json = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      const err = new Error(json.error || `transcribe failed: ${res.status}`);
+      err.code = json.code;
+      err.status = res.status;
+      throw err;
+    }
+    return json;
+  }
+
   // Graceful-degradation helpers: keep the static prototype usable even if
   // the backend isn't running. Components can pass a fallback (typically the
   // hardcoded SUBURBS/SERVICES arrays already on window) and stay rendering.
@@ -70,5 +87,6 @@
     getDashboard,
     getDashboardOrFallback,
     getHealth,
+    transcribeAudio,
   };
 })();

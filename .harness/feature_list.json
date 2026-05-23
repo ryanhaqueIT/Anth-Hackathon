@@ -5,7 +5,7 @@
     "created": "2026-05-23",
     "total": 7,
     "passing": 0,
-    "notes": "Seeded from the seven React components in Neighbourhood Pulse/components/. Verification requires the prototype to be runnable in a browser; current state is JSX source without a build pipeline, so all features will read as not-yet-verifiable until Vite/Webpack/similar is wired up."
+    "notes": "Seeded from the React components in frontend/components/. Verification requires the prototype to be runnable in a browser; current state is JSX source without a build pipeline, so all features will read as not-yet-verifiable until Vite/Webpack/similar is wired up."
   },
   "features": [
     {
@@ -14,7 +14,7 @@
       "priority": 1,
       "description": "Resident app renders main sections without errors",
       "steps": [
-        "Boot the prototype (e.g., open Neighbourhood Pulse.html via a Vite dev server)",
+        "Boot the prototype (cd backend && npm start, open http://localhost:3000/)",
         "Navigate to the resident view (mounted from components/resident-app.jsx)",
         "Verify the page header, navigation, and primary content area are visible",
         "Verify the browser DevTools console reports zero errors"
