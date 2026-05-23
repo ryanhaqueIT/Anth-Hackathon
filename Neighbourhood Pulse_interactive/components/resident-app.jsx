@@ -5,6 +5,7 @@
 //                            deeper → support → calling → support
 //                                              ↘ breathing → checkin
 //             listening (voice) → recs
+//             quiet mood → hostOffer → hostCraft → hostWhen → hosted → checkin
 //
 // Each screen is a sub-component that takes callbacks. ResidentApp wires them.
 //
@@ -13,6 +14,7 @@
 // the returned recommendations to local state, and ScreenRecs renders those
 // in place of the hardcoded SERVICES from data.js. Falls back to data.js
 // SERVICES if the API is unreachable (so the prototype still works offline).
+// The host flow is purely client-side — no backend persistence yet.
 
 // ─── icon set ───────────────────────────────────────────────────────────
 const Icon = {
@@ -515,6 +517,184 @@ function ScreenBreathing({ onDone }) {
   );
 }
 
+// ─── SCREEN: host-offer (resident as protagonist) ───────────────────────
+function ScreenHostOffer({ onYes, onLater, onBack }) {
+  return (
+    <div className="resident host-stage">
+      <ResidentTop onBack={onBack}/>
+      <div className="scroll" style={{ paddingBottom: 24 }}>
+        <div className="host-intro">
+          <div className="host-recall">
+            <span className="heart"><Icon.heart/></span>
+            Last month, 4 neighbours came to your tea &amp; chat
+          </div>
+          <h1>A quiet day’s a fair kind of <em>day</em>, Margaret.</h1>
+          <p>
+            Lately three of your neighbours have offered to share what they know — Joan’s sourdough, Vinh’s gentle walks, an Italian afternoon. Is there something you’d quietly love to share?
+          </p>
+        </div>
+        <div className="host-actions">
+          <button className="primary" onClick={onYes}>
+            Yes, I have an idea <Icon.arrow/>
+          </button>
+          <button className="secondary" onClick={onLater}>
+            Maybe just show me what’s about
+          </button>
+        </div>
+
+        <div style={{ padding: '6px 24px 0', fontSize: '0.78rem', color: 'var(--ink-4)', textAlign: 'center', lineHeight: 1.5 }}>
+          Hosting is just an offer — neighbours can ask to come along, and you say yes or no. No fuss, no charge.
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── SCREEN: host-craft (pick what to share) ────────────────────────────
+function ScreenHostCraft({ topic, onPick, onContinue, onBack }) {
+  return (
+    <div className="resident host-stage">
+      <ResidentTop onBack={onBack}/>
+      <div className="scroll" style={{ paddingBottom: 24 }}>
+        <div className="host-intro">
+          <h1>What might you <em>share</em>?</h1>
+          <p>No big production — just something small and warm.</p>
+        </div>
+        <div className="host-grid">
+          {HOST_TOPICS.map((tp) => (
+            <button
+              key={tp.id}
+              className={`host-card ${topic === tp.id ? 'selected' : ''}`}
+              onClick={() => onPick(tp.id)}
+            >
+              <span className="swatch" style={{ background: tp.swatch }}></span>
+              <span className="label">{tp.label}</span>
+              <span className="eg">e.g. {tp.eg}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+      <div className="host-cta">
+        <button className="post-btn" disabled={!topic} onClick={onContinue}>
+          Continue <Icon.arrow/>
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ─── SCREEN: host-when (when / where / how many) ────────────────────────
+function ScreenHostWhen({ topic, when, venue, size, onWhen, onVenue, onSize, onContinue, onBack }) {
+  return (
+    <div className="resident host-stage">
+      <ResidentTop onBack={onBack}/>
+      <div className="scroll" style={{ paddingBottom: 24 }}>
+        <div className="host-intro">
+          <h1>When and <em>where</em>?</h1>
+          <p>Pick something easy. You can always change later.</p>
+        </div>
+
+        <div className="host-section">
+          <h4>When</h4>
+          <div className="host-options">
+            {HOST_TIMES.map((t) => (
+              <button key={t.id} className={`opt ${when === t.id ? 'selected' : ''}`} onClick={() => onWhen(t.id)}>
+                <span>{t.label}</span>
+                <span className="detail">{t.detail}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="host-section">
+          <h4>Where</h4>
+          <div className="host-options">
+            {HOST_VENUES.map((v) => (
+              <button key={v.id} className={`opt ${venue === v.id ? 'selected' : ''}`} onClick={() => onVenue(v.id)}>
+                <span>{v.label}</span>
+                <span className="detail">{v.desc}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="host-section">
+          <h4>How many</h4>
+          <div className="host-options">
+            {HOST_SIZES.map((s) => (
+              <button key={s.id} className={`opt ${size === s.id ? 'selected' : ''}`} onClick={() => onSize(s.id)}>
+                <span>{s.label}</span>
+                <span className="detail">{s.detail}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+      <div className="host-cta">
+        <button className="post-btn" disabled={!(when && venue && size)} onClick={onContinue}>
+          Post to neighbourhood <Icon.arrow/>
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ─── SCREEN: hosted confirmation ────────────────────────────────────────
+function ScreenHosted({ topic, when, venue, size, onDone }) {
+  React.useEffect(() => {
+    const t = setTimeout(onDone, 6000);
+    return () => clearTimeout(t);
+  }, [onDone]);
+  const tp = HOST_TOPICS.find((x) => x.id === topic) || HOST_TOPICS[0];
+  const w  = HOST_TIMES.find((x) => x.id === when)   || HOST_TIMES[0];
+  const v  = HOST_VENUES.find((x) => x.id === venue) || HOST_VENUES[0];
+  const sz = HOST_SIZES.find((x) => x.id === size)   || HOST_SIZES[0];
+  // For sourdough running example, prettify the title; otherwise generic.
+  const title = topic === 'bake'
+    ? "Margaret’s Sourdough — a quiet morning"
+    : `Margaret’s ${tp.label.toLowerCase()}`;
+  return (
+    <div className="resident">
+      <ResidentTop/>
+      <div className="hosted-stage">
+        <div className="hosted-tick">
+          <svg viewBox="0 0 24 24" width={36} height={36} fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 12.5l5 5L20 7"/></svg>
+        </div>
+        <div className="hosted-title">Your offer is live.</div>
+        <div className="hosted-sub">
+          I’ll let you know quietly when a neighbour signs up — no pressure, no buzzing.
+        </div>
+
+        <div className="host-preview">
+          <span className="pv-tag">
+            <span style={{ width: 6, height: 6, borderRadius: '50%', background: 'currentColor' }}></span>
+            Hosted by a neighbour · {tp.label.toLowerCase()}
+          </span>
+          <h3 className="pv-title">{title}</h3>
+          <div className="pv-meta">
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}><Icon.clock/>{w.label} · {w.detail.split('·')[1]?.trim()}</span>
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}><Icon.pin/>{v.label}</span>
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+              <svg viewBox="0 0 24 24" width={14} height={14} fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="9" cy="8" r="3"/><path d="M2 21c0-3.5 3-6 7-6s7 2.5 7 6"/><circle cx="17" cy="6" r="2.4"/><path d="M22 18c0-2.5-2-4-4.5-4"/>
+              </svg>
+              {sz.label}
+            </span>
+          </div>
+          <p className="pv-why">
+            <span className="label">Margaret says —</span>
+            A quiet morning. We’ll knead, drink tea, and share what we know. Beginners very welcome.
+          </p>
+        </div>
+
+        <div className="hosted-foot">
+          You’ve added something warm to Carlton today, Margaret.
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // Mood-button label → conversational free-text the backend classifier
 // can keyword-match against. The buttons themselves don't carry text the
 // resident typed; this mapping reconstructs a sensible utterance so the
@@ -535,6 +715,13 @@ function ResidentApp() {
   // recsData holds the most recent /api/checkins response, or null if the
   // backend is unreachable / no check-in has been submitted yet.
   const [recsData, setRecsData] = React.useState(null);
+  // Host-flow state
+  const [hostTopic, setHostTopic] = React.useState(null);
+  const [hostWhen, setHostWhen]   = React.useState(null);
+  const [hostVenue, setHostVenue] = React.useState(null);
+  const [hostSize, setHostSize]   = React.useState(null);
+  const resetHost = () => { setHostTopic(null); setHostWhen(null); setHostVenue(null); setHostSize(null); };
+
   // Track an ack-screen timeout so we can clear it if the user navigates away
   const ackTimer = React.useRef(null);
   React.useEffect(() => () => clearTimeout(ackTimer.current), []);
@@ -567,8 +754,9 @@ function ResidentApp() {
   };
 
   const onMood = (m) => {
-    if (m === 'hard') { setMood(m); setScreen('deeper'); }
-    else routeViaAck(m, 'recs');
+    if (m === 'hard')      { setMood(m); setScreen('deeper'); }
+    else if (m === 'quiet') routeViaAck(m, 'hostOffer');
+    else                   routeViaAck(m, 'recs');
   };
   const onDeeper = (kind) => {
     if (kind === 'low') routeViaAck('low', 'recs');
@@ -593,6 +781,37 @@ function ResidentApp() {
             setScreen('recs');
           }}/>}
           {screen === 'breathing'   && <ScreenBreathing   onDone={() => setScreen('checkin')}/>}
+
+          {/* Host flow */}
+          {screen === 'hostOffer' && (
+            <ScreenHostOffer
+              onYes={() => { setHostTopic('bake'); setScreen('hostCraft'); }}
+              onLater={() => setScreen('recs')}
+              onBack={() => setScreen('checkin')}
+            />
+          )}
+          {screen === 'hostCraft' && (
+            <ScreenHostCraft
+              topic={hostTopic}
+              onPick={setHostTopic}
+              onContinue={() => setScreen('hostWhen')}
+              onBack={() => setScreen('hostOffer')}
+            />
+          )}
+          {screen === 'hostWhen' && (
+            <ScreenHostWhen
+              topic={hostTopic} when={hostWhen} venue={hostVenue} size={hostSize}
+              onWhen={setHostWhen} onVenue={setHostVenue} onSize={setHostSize}
+              onContinue={() => setScreen('hosted')}
+              onBack={() => setScreen('hostCraft')}
+            />
+          )}
+          {screen === 'hosted' && (
+            <ScreenHosted
+              topic={hostTopic} when={hostWhen} venue={hostVenue} size={hostSize}
+              onDone={() => { resetHost(); setScreen('checkin'); }}
+            />
+          )}
         </div>
       </div>
     </div>
