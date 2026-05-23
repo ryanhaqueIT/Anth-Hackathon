@@ -1,0 +1,276 @@
+{
+  "version": 1,
+  "timestamp": "2026-05-23T04:04:19.123826Z",
+  "run_id": 1,
+  "status": "failed",
+  "duration_ms": 16079,
+  "gates": {
+    "B1": {
+      "status": "skipped",
+      "name": "Lint",
+      "layer": 1,
+      "duration_ms": 0,
+      "findings": 0,
+      "details": [
+        "no backend directory"
+      ]
+    },
+    "B2": {
+      "status": "skipped",
+      "name": "Format",
+      "layer": 1,
+      "duration_ms": 0,
+      "findings": 0,
+      "details": [
+        "no backend directory"
+      ]
+    },
+    "B3": {
+      "status": "skipped",
+      "name": "Tests",
+      "layer": 3,
+      "duration_ms": 0,
+      "findings": 0,
+      "details": [
+        "no backend directory"
+      ]
+    },
+    "B4": {
+      "status": "skipped",
+      "name": "Import Boundaries",
+      "layer": 2,
+      "duration_ms": 0,
+      "findings": 0,
+      "details": [
+        "no backend directory"
+      ]
+    },
+    "B5": {
+      "status": "skipped",
+      "name": "Golden Principles",
+      "layer": 2,
+      "duration_ms": 0,
+      "findings": 0,
+      "details": [
+        "no backend directory"
+      ]
+    },
+    "B6": {
+      "status": "skipped",
+      "name": "Architecture",
+      "layer": 2,
+      "duration_ms": 0,
+      "findings": 0,
+      "details": [
+        "no backend directory"
+      ]
+    },
+    "B7": {
+      "status": "skipped",
+      "name": "Type Check",
+      "layer": 2,
+      "duration_ms": 0,
+      "findings": 0,
+      "details": [
+        "no backend directory"
+      ]
+    },
+    "B8": {
+      "status": "skipped",
+      "name": "Wiring",
+      "layer": 2,
+      "duration_ms": 0,
+      "findings": 0,
+      "details": [
+        "no backend directory"
+      ]
+    },
+    "F1": {
+      "status": "skipped",
+      "name": "TS Check",
+      "layer": 4,
+      "duration_ms": 0,
+      "findings": 0,
+      "details": [
+        "no frontend directory"
+      ]
+    },
+    "F2": {
+      "status": "skipped",
+      "name": "ESLint",
+      "layer": 4,
+      "duration_ms": 0,
+      "findings": 0,
+      "details": [
+        "no frontend directory"
+      ]
+    },
+    "F3": {
+      "status": "skipped",
+      "name": "Prettier",
+      "layer": 4,
+      "duration_ms": 0,
+      "findings": 0,
+      "details": [
+        "no frontend directory"
+      ]
+    },
+    "F4": {
+      "status": "skipped",
+      "name": "Build",
+      "layer": 4,
+      "duration_ms": 0,
+      "findings": 0,
+      "details": [
+        "no frontend directory"
+      ]
+    },
+    "F5": {
+      "status": "skipped",
+      "name": "Frontend Tests",
+      "layer": 4,
+      "duration_ms": 0,
+      "findings": 0,
+      "details": [
+        "no frontend directory"
+      ]
+    },
+    "F6": {
+      "status": "skipped",
+      "name": "UI Legibility",
+      "layer": 5,
+      "duration_ms": 0,
+      "findings": 0,
+      "details": [
+        "no frontend directory"
+      ]
+    },
+    "F7": {
+      "status": "skipped",
+      "name": "Playwright",
+      "layer": 5,
+      "duration_ms": 0,
+      "findings": 0,
+      "details": [
+        "no frontend directory"
+      ]
+    },
+    "I1": {
+      "status": "skipped",
+      "name": "Terraform Fmt",
+      "layer": 5,
+      "duration_ms": 0,
+      "findings": 0,
+      "details": [
+        "no infra directory"
+      ]
+    },
+    "I2": {
+      "status": "skipped",
+      "name": "Terraform Validate",
+      "layer": 5,
+      "duration_ms": 0,
+      "findings": 0,
+      "details": [
+        "no infra directory"
+      ]
+    },
+    "X1": {
+      "status": "passed",
+      "name": "Doc cross-refs",
+      "layer": 7,
+      "duration_ms": 357,
+      "findings": 0,
+      "details": []
+    },
+    "X2": {
+      "status": "passed",
+      "name": "No secrets",
+      "layer": 7,
+      "duration_ms": 911,
+      "findings": 0,
+      "details": []
+    },
+    "X3": {
+      "status": "skipped",
+      "name": "E2E validation (local)",
+      "layer": 7,
+      "duration_ms": 0,
+      "findings": 0,
+      "details": [
+        "no running instance \u2014 use RUN_E2E=true or boot_worktree.sh"
+      ]
+    },
+    "X4": {
+      "status": "skipped",
+      "name": "E2E deployed (Layer 7)",
+      "layer": 7,
+      "duration_ms": 0,
+      "findings": 0,
+      "details": [
+        "set DEPLOYED_URL to enable"
+      ]
+    },
+    "O1": {
+      "status": "skipped",
+      "name": "Observability (Layer 6)",
+      "layer": 6,
+      "duration_ms": 0,
+      "findings": 0,
+      "details": [
+        "stack not running \u2014 docker compose -f docker-compose.observability.yml up -d"
+      ]
+    },
+    "X5": {
+      "status": "failed",
+      "name": "Feature list (PRD gate)",
+      "layer": 7,
+      "duration_ms": 611,
+      "findings": 0,
+      "details": []
+    },
+    "X6": {
+      "status": "skipped",
+      "name": "Live feature tests",
+      "layer": 7,
+      "duration_ms": 0,
+      "findings": 0,
+      "details": [
+        "app not running \u2014 use boot_worktree.sh or RUN_LIVE=true"
+      ]
+    },
+    "X7": {
+      "status": "failed",
+      "name": "Spec compliance (evidence traceability)",
+      "layer": 7,
+      "duration_ms": 559,
+      "findings": 0,
+      "details": []
+    },
+    "R1": {
+      "status": "passed",
+      "name": "Ratchet (quality baseline)",
+      "layer": 7,
+      "duration_ms": 773,
+      "findings": 0,
+      "details": []
+    }
+  },
+  "pipeline": {
+    "validate": {
+      "status": "failed",
+      "label": "Validation failed"
+    }
+  },
+  "agents": {
+    "active": null,
+    "task": "",
+    "agents": {}
+  },
+  "scorecard": {
+    "grade": "?",
+    "score": 0,
+    "total": 31
+  },
+  "ratchet": {}
+}

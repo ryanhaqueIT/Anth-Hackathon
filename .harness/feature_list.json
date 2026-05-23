@@ -1,0 +1,116 @@
+{
+  "version": "1.0",
+  "meta": {
+    "project": "Anth-Hackathon — Neighbourhood Pulse",
+    "created": "2026-05-23",
+    "total": 7,
+    "passing": 0,
+    "notes": "Seeded from the seven React components in Neighbourhood Pulse/components/. Verification requires the prototype to be runnable in a browser; current state is JSX source without a build pipeline, so all features will read as not-yet-verifiable until Vite/Webpack/similar is wired up."
+  },
+  "features": [
+    {
+      "id": "F001",
+      "category": "ui",
+      "priority": 1,
+      "description": "Resident app renders main sections without errors",
+      "steps": [
+        "Boot the prototype (e.g., open Neighbourhood Pulse.html via a Vite dev server)",
+        "Navigate to the resident view (mounted from components/resident-app.jsx)",
+        "Verify the page header, navigation, and primary content area are visible",
+        "Verify the browser DevTools console reports zero errors"
+      ],
+      "passes": false,
+      "verified_by": null,
+      "verified_at": null
+    },
+    {
+      "id": "F002",
+      "category": "ui",
+      "priority": 1,
+      "description": "Council dashboard renders main sections without errors",
+      "steps": [
+        "Boot the prototype",
+        "Navigate to the council view (mounted from components/council-dashboard.jsx)",
+        "Verify dashboard widgets (data summaries, controls) are visible",
+        "Verify the browser DevTools console reports zero errors"
+      ],
+      "passes": false,
+      "verified_by": null,
+      "verified_at": null
+    },
+    {
+      "id": "F003",
+      "category": "ui",
+      "priority": 2,
+      "description": "Design canvas can toggle between resident and council views",
+      "steps": [
+        "Boot the prototype",
+        "Open the design canvas (components/design-canvas.jsx)",
+        "Toggle the active view between resident and council",
+        "Verify each toggle renders the corresponding component without errors"
+      ],
+      "passes": false,
+      "verified_by": null,
+      "verified_at": null
+    },
+    {
+      "id": "F004",
+      "category": "ui",
+      "priority": 2,
+      "description": "Browser-window frame chrome renders around active view",
+      "steps": [
+        "Boot the prototype",
+        "Verify components/browser-window.jsx renders as a frame around the active view",
+        "Verify the frame's tab/URL elements display the expected labels"
+      ],
+      "passes": false,
+      "verified_by": null,
+      "verified_at": null
+    },
+    {
+      "id": "F005",
+      "category": "ui",
+      "priority": 3,
+      "description": "Tweaks panel exposes design-canvas controls",
+      "steps": [
+        "Boot the prototype",
+        "Open the tweaks panel (components/tweaks-panel.jsx)",
+        "Verify each control is interactive and updates the canvas state",
+        "Verify no console errors are emitted while interacting"
+      ],
+      "passes": false,
+      "verified_by": null,
+      "verified_at": null
+    },
+    {
+      "id": "F006",
+      "category": "reliability",
+      "priority": 3,
+      "description": "Application loads without console errors or unhandled promise rejections",
+      "steps": [
+        "Boot the prototype",
+        "Open browser DevTools Console tab",
+        "Reload the page",
+        "Verify zero errors and zero unhandled rejections appear in the console"
+      ],
+      "passes": false,
+      "verified_by": null,
+      "verified_at": null
+    },
+    {
+      "id": "F007",
+      "category": "observability",
+      "priority": 3,
+      "description": "Application emits structured log events for primary user actions",
+      "steps": [
+        "Boot the prototype",
+        "Perform a representative user action (e.g., switch view, change a tweak)",
+        "Inspect the console or log sink for a structured JSON log entry naming the action",
+        "Verify the log entry includes a correlation ID or session ID field"
+      ],
+      "passes": false,
+      "verified_by": null,
+      "verified_at": null
+    }
+  ]
+}

@@ -1,0 +1,57 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(scripts/validate.sh)",
+      "Bash(bash scripts/validate.sh)",
+      "Bash(scripts/boot_worktree.sh)",
+      "Bash(bash scripts/boot_worktree.sh*)",
+      "Bash(python3 scripts/harness_scorecard.py)",
+      "Bash(python3 scripts/ratchet.py*)",
+      "Bash(python3 scripts/check_imports.py)",
+      "Bash(python3 scripts/check_golden_principles.py)",
+      "Bash(python3 scripts/check_architecture.py)",
+      "Bash(python3 scripts/check_features.py*)",
+      "Bash(python3 scripts/check_features_live.py*)",
+      "Bash(python3 scripts/check_spec_compliance.py)",
+      "Bash(python3 scripts/check_wiring.py)",
+      "Bash(python3 scripts/workflow.py*)",
+      "Bash(git status*)",
+      "Bash(git diff*)",
+      "Bash(git log*)",
+      "Bash(git branch*)",
+      "Bash(git add*)",
+      "Bash(git commit*)",
+      "Bash(git push)",
+      "Bash(git pull*)",
+      "Bash(git fetch*)",
+      "Bash(git show*)",
+      "Bash(gh repo view*)",
+      "Bash(gh pr view*)",
+      "Bash(gh api repos/*)"
+    ],
+    "deny": [
+      "Bash(rm -rf /*)",
+      "Bash(rm -rf ~*)",
+      "Bash(git push --force*)",
+      "Bash(git push -f*)",
+      "Bash(git reset --hard*)",
+      "Bash(git clean -fd*)",
+      "Bash(git commit --no-verify*)",
+      "Bash(git commit -n*)"
+    ]
+  },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write|NotebookEdit",
+        "command": "bash .claude/hooks/post-edit.sh"
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Edit|Write|NotebookEdit",
+        "command": "python3 .claude/hooks/enforce-locations.py"
+      }
+    ]
+  }
+}

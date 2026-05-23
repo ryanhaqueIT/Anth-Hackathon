@@ -1,0 +1,11 @@
+# Harness engineering
+.harness/snapshots/
+instance-metadata.json
+*.pid
+
+# Backend
+backend/node_modules/
+backend/data.sqlite
+backend/data.sqlite-journal
+backend/data.sqlite-wal
+backend/data.sqlite-shm
