@@ -9,17 +9,11 @@ export function ResidentTop({ onBack, right }: { onBack?: () => void; right?: Re
 			{onBack ? (
 				<button type="button" className="icon-btn" aria-label="Back" onClick={onBack}><Icon.back /></button>
 			) : (
-				<div className="brand"><span className="pulse-dot" /><span>Pulse</span></div>
-			)}
-			{onBack && (
-				<div className="brand"><span className="pulse-dot" /><span>Pulse</span></div>
+				<span />
 			)}
 			<div style={{ display: "flex", gap: 8 }}>
 				{right ?? (
-					<>
-						<button type="button" className="icon-btn" aria-label="Help"><Icon.help /></button>
-						<button type="button" className="icon-btn" aria-label="Settings"><Icon.settings /></button>
-					</>
+					<button type="button" className="icon-btn" aria-label="Settings"><Icon.settings /></button>
 				)}
 			</div>
 		</div>
@@ -38,7 +32,6 @@ export function ScreenCheckin({ onMood, onVoice }: { onMood: (k: string) => void
 			<div>
 				<ResidentTop />
 				<div className="greet-block">
-					<p className="greet-small">It's Tuesday afternoon in Carlton.</p>
 					<h1 className="ask">How are you <em>doing</em> today, Margaret?</h1>
 				</div>
 				<div className="feel-list">
@@ -357,10 +350,6 @@ export function ScreenHostOffer({ onYes, onLater, onBack }: { onYes: () => void;
 			<ResidentTop onBack={onBack} />
 			<div className="scroll" style={{ paddingBottom: 24 }}>
 				<div className="host-intro">
-					<div className="host-recall">
-						<span className="heart"><Icon.heart /></span>
-						Last month, 4 neighbours came to your tea &amp; chat
-					</div>
 					<h1>A quiet day's a fair kind of <em>day</em>, Margaret.</h1>
 					<p>
 						Lately three of your neighbours have offered to share what they know — Joan's sourdough, Vinh's gentle walks, an Italian afternoon. Is there something you'd quietly love to share?

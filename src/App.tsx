@@ -13,7 +13,7 @@ function App() {
 			</div>
 
 			<div className="view-switcher" role="tablist" aria-label="Demo perspective">
-				<span className="vs-pre">You're viewing as</span>
+				<span className="vs-pre">View as:</span>
 				<button
 					type="button"
 					role="tab"
@@ -21,8 +21,7 @@ function App() {
 					className={`vs-btn ${view === "resident" ? "on" : ""}`}
 					onClick={() => setView("resident")}
 				>
-					<span className="vs-dot" style={{ background: "var(--clay)" }} />
-					Margaret · 78, Carlton
+					User
 				</button>
 				<button
 					type="button"
@@ -31,8 +30,7 @@ function App() {
 					className={`vs-btn ${view === "council" ? "on" : ""}`}
 					onClick={() => setView("council")}
 				>
-					<span className="vs-dot" style={{ background: "var(--ink)" }} />
-					City of Melbourne · planner
+					Council
 				</button>
 			</div>
 		</>
