@@ -24,11 +24,24 @@
 .DS_Store
 *.pem
 
+# editors / IDEs
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Claude Code local-only settings
+.claude/settings.local.json
+
 # debug
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
+
+# only pnpm-lock.yaml is committed
+package-lock.json
+yarn.lock
 
 # env files (can opt-in for committing if needed)
 .env*
