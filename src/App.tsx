@@ -1,33 +1,15 @@
 import { useState } from "react";
 import { CouncilApp } from "@/components/dashboard/council-app";
+import { ResidentApp } from "@/components/resident/resident-app";
 
 type View = "resident" | "council";
 
-function ResidentPlaceholder() {
-	return (
-		<div className="resident">
-			<div className="topbar">
-				<div className="brand">
-					<span className="pulse-dot" />
-					<span>Neighbourhood Pulse</span>
-				</div>
-			</div>
-			<div className="scroll" style={{ display: "flex", alignItems: "center", justifyContent: "center", textAlign: "center" }}>
-				<div>
-					<h1 className="greet">The resident app <em>lives here soon</em>.</h1>
-					<p className="greet-sub">Real voice check-ins, AI companion, and recommendations come next.</p>
-				</div>
-			</div>
-		</div>
-	);
-}
-
 function App() {
-	const [view, setView] = useState<View>("council");
+	const [view, setView] = useState<View>("resident");
 	return (
 		<>
 			<div className="view-stage" data-view={view}>
-				{view === "resident" ? <ResidentPlaceholder /> : <CouncilApp />}
+				{view === "resident" ? <ResidentApp /> : <CouncilApp />}
 			</div>
 
 			<div className="view-switcher" role="tablist" aria-label="Demo perspective">
