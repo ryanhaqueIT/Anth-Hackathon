@@ -35,7 +35,18 @@ export type CheckinResult = {
 	headline: string;
 	source: "openai" | "fallback";
 	recommendations: Array<ServiceMatch & { why: string }>;
+	fallback_reason?: string;
 };
+
+async function fallbackSearch(input: CheckinInput, reason: string): Promise<CheckinResult> {
+	const matches = await searchServices({ keywords: input.free_text, suburb: input.suburb, limit: 3 });
+	return {
+		source: "fallback",
+		headline: "Here are a few nearby options that might suit today.",
+		fallback_reason: reason,
+		recommendations: matches.map((s) => ({ ...s, why: "Nearby free or low-cost support service." })),
+	};
+}
 
 const SYSTEM = `You are a calm, kind companion for older residents of inner Melbourne.
 Your job: hear the resident's check-in, then pick 1-3 nearby free or low-cost services
@@ -49,14 +60,7 @@ Tone: warm, plain, gentle. No clinical jargon. Speak in en-AU.`;
 
 export async function runCheckin(input: CheckinInput): Promise<CheckinResult> {
 	const p = provider();
-	if (!p) {
-		const fallback = await searchServices({ keywords: input.free_text, suburb: input.suburb, limit: 3 });
-		return {
-			source: "fallback",
-			headline: "Here are a few nearby options that might suit today.",
-			recommendations: fallback.map((s) => ({ ...s, why: "Nearby free or low-cost support service." })),
-		};
-	}
+	if (!p) return fallbackSearch(input, "OPENAI_API_KEY not set");
 
 	const seen = new Map<string, ServiceMatch>();
 	const findTool = tool({
@@ -81,42 +85,47 @@ export async function runCheckin(input: CheckinInput): Promise<CheckinResult> {
 
 	const userMessage = `Resident in ${input.suburb} (${input.age_band}) said: "${input.free_text}". Mood signal: ${input.mood}. Find what would suit them today.`;
 
-	await generateText({
-		model: p(MODEL),
-		system: SYSTEM,
-		prompt: userMessage,
-		tools: { find_local_services: findTool },
-		stopWhen: stepCountIs(4),
-	});
+	try {
+		await generateText({
+			model: p(MODEL),
+			system: SYSTEM,
+			prompt: userMessage,
+			tools: { find_local_services: findTool },
+			stopWhen: stepCountIs(4),
+		});
 
-	const candidates = Array.from(seen.values()).slice(0, 12);
-	if (candidates.length === 0) {
-		return {
-			source: "openai",
-			headline: "I couldn't find a perfect match nearby today, but I'll keep listening.",
-			recommendations: [],
-		};
+		const candidates = Array.from(seen.values()).slice(0, 12);
+		if (candidates.length === 0) {
+			return {
+				source: "openai",
+				headline: "I couldn't find a perfect match nearby today, but I'll keep listening.",
+				recommendations: [],
+			};
+		}
+
+		const { object } = await generateObject({
+			model: p(MODEL),
+			schema: recommendationSchema,
+			system: "Choose the 1-3 services that best fit. Use the exact `name` strings from the candidates. Warm en-AU tone.",
+			prompt: `Resident said: "${input.free_text}" (mood: ${input.mood}).\n\nCandidates:\n${candidates
+				.map((c) => `- ${c.name} (${c.suburb}, ${c.distance_km ?? "?"}km) — ${c.categories.join(", ")} — ${c.what.slice(0, 160)}`)
+				.join("\n")}`,
+		});
+
+		const byName = new Map(candidates.map((c) => [c.name, c]));
+		const picks = object.recommendations
+			.map((r) => {
+				const match = byName.get(r.name);
+				if (!match) return null;
+				return { ...match, why: r.why };
+			})
+			.filter((x): x is ServiceMatch & { why: string } => !!x);
+
+		return { source: "openai", headline: object.headline, recommendations: picks };
+	} catch (err) {
+		const message = err instanceof Error ? err.message : "OpenAI call failed";
+		return fallbackSearch(input, message);
 	}
-
-	const { object } = await generateObject({
-		model: p(MODEL),
-		schema: recommendationSchema,
-		system: "Choose the 1-3 services that best fit. Use the exact `name` strings from the candidates. Warm en-AU tone.",
-		prompt: `Resident said: "${input.free_text}" (mood: ${input.mood}).\n\nCandidates:\n${candidates
-			.map((c) => `- ${c.name} (${c.suburb}, ${c.distance_km ?? "?"}km) — ${c.categories.join(", ")} — ${c.what.slice(0, 160)}`)
-			.join("\n")}`,
-	});
-
-	const byName = new Map(candidates.map((c) => [c.name, c]));
-	const picks = object.recommendations
-		.map((r) => {
-			const match = byName.get(r.name);
-			if (!match) return null;
-			return { ...match, why: r.why };
-		})
-		.filter((x): x is ServiceMatch & { why: string } => !!x);
-
-	return { source: "openai", headline: object.headline, recommendations: picks };
 }
 
 export function chatProvider() {

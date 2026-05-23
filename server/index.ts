@@ -9,7 +9,7 @@ import { z } from "zod";
 import { COMPANION_SYSTEM, chatProvider, runCheckin } from "./ai.js";
 import { searchServices } from "./helping-out.js";
 
-dotenv.config();
+dotenv.config({ override: true });
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const isProd = process.env.NODE_ENV === "production";
