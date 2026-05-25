@@ -1,17 +1,31 @@
 // POST /api/checkins
 // Body: { suburb, age_band?, mood?, free_text, consent?, input_channel?, accessibility? }
-// Side effects: classifies need, persists check-in + recommendations.
-// Returns the persisted check-in with 1-3 scored recommendations.
+//
+// Pipeline:
+//   1. Validate input and resolve the area.
+//   2. AGENTIC layer (Claude) — classify need, detect distress, extract key
+//      phrases, compose a warm conversational reply.
+//      Falls back to the regex classifier in classifier.js if the agent is
+//      unavailable (ANTHROPIC_API_KEY missing) or errors. The fallback path
+//      uses a templated warm_reply so the frontend's TTS still has something
+//      sensible to speak even without Claude.
+//   3. DETERMINISTIC layer — persist the check-in (including the new agent
+//      fields), run the scored recommender against the right area, persist
+//      the recommendations.
+//   4. Respond with the full payload the frontend needs to render recs, speak
+//      warm_reply via speechSynthesis, and optionally route to the distress
+//      flow when the agent flagged high urgency.
 
 const express = require('express');
 const { randomUUID } = require('crypto');
 const { db } = require('../db');
 const { classify } = require('../classifier');
 const { recommend } = require('../recommender');
+const agent = require('../agent');
 
 const router = express.Router();
 
-router.post('/', (req, res, next) => {
+router.post('/', async (req, res, next) => {
   try {
     const {
       suburb,
@@ -37,14 +51,45 @@ router.post('/', (req, res, next) => {
       return res.status(404).json({ error: `unknown suburb: ${suburb}` });
     }
 
-    const needTypes = db.prepare('SELECT id, keywords FROM need_types').all();
-    const needTypeId = classify(free_text, needTypes);
+    // ── Agentic classification (Claude) with regex fallback ──────────────
+    let agentResult = null;
+    let needTypeId = null;
+    let warmReply = null;
+    let keyPhrases = [];
+    let distress = { is_distressed: false, urgency: 'low', suggested_specialist: 'none' };
+    let agentSource = 'regex';
 
+    if (agent.isEnabled()) {
+      try {
+        agentResult = await agent.classifyAndRespond({
+          free_text,
+          mood,
+          suburb: area.name,
+          age_band,
+        });
+        needTypeId = agentResult.need_type;
+        warmReply = agentResult.warm_reply;
+        keyPhrases = agentResult.key_phrases;
+        distress = agentResult.distress;
+        agentSource = 'claude';
+      } catch (err) {
+        console.warn('[agent] failed, falling back to regex classifier:', err.message);
+      }
+    }
+
+    if (!needTypeId) {
+      const needTypes = db.prepare('SELECT id, keywords FROM need_types').all();
+      needTypeId = classify(free_text, needTypes);
+      warmReply = templateWarmReply(needTypeId);
+    }
+
+    // ── Persist check-in (with new agentic fields) ───────────────────────
     const checkinId = randomUUID();
     db.prepare(`
       INSERT INTO checkins
-        (id, area_id, age_band, mood, free_text, need_type_id, input_channel, consent)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        (id, area_id, age_band, mood, free_text, need_type_id, input_channel, consent,
+         agent_reply, key_phrases, distress_detected, distress_urgency)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
       checkinId,
       area.id,
@@ -54,9 +99,13 @@ router.post('/', (req, res, next) => {
       needTypeId,
       input_channel,
       consent ? 1 : 0,
+      warmReply,
+      JSON.stringify(keyPhrases),
+      distress.is_distressed ? 1 : 0,
+      distress.urgency,
     );
 
-    // Candidate services: same-area first, top up from other areas if fewer than 3.
+    // ── Recommend services (deterministic; ERD §FR5 weights 40/25/20/15) ─
     let services = db
       .prepare('SELECT * FROM support_services WHERE area_id = ?')
       .all(area.id);
@@ -90,6 +139,13 @@ router.post('/', (req, res, next) => {
       need_type: needTypeId,
       mood: mood || null,
       consent: consent ? 1 : 0,
+      warm_reply: warmReply,
+      distress,
+      key_phrases: keyPhrases,
+      agent: {
+        source: agentSource,
+        meta: agentResult ? agentResult._meta : null,
+      },
       recommendations: recs.map((r, i) => ({
         position: i + 1,
         service: {
@@ -113,5 +169,22 @@ router.post('/', (req, res, next) => {
     next(e);
   }
 });
+
+// Templated warm reply for the regex-fallback path (when the Claude agent
+// isn't available). One line per need type — short and unambiguous so the
+// frontend's speechSynthesis still has something to read aloud.
+function templateWarmReply(needTypeId) {
+  const REPLIES = {
+    social_connection: "I'll find a few nearby things where you can be around friendly people — take your time looking.",
+    food_support: 'Let me find a few nearby places where you can grab a warm meal or some groceries.',
+    transport_support: "I'll look for options that come to you or are easy to reach without the bus.",
+    health_navigation: "Let me find some local health services that might help — no rush.",
+    wellbeing_chat: "Let me find a few gentle things, including a friendly phone visitor if today feels heavy.",
+    financial_help: "I'll see what free or low-cost help is around — there's usually more than people expect.",
+    safety_support: "I'll find some safe places nearby. If you're in danger right now, please dial 000.",
+    general_support: "Let me see what's happening nearby today — a few small things might catch your eye.",
+  };
+  return REPLIES[needTypeId] || REPLIES.general_support;
+}
 
 module.exports = router;

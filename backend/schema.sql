@@ -49,16 +49,22 @@ CREATE TABLE IF NOT EXISTS residents (
 );
 
 CREATE TABLE IF NOT EXISTS checkins (
-  id              TEXT PRIMARY KEY,
-  resident_id     TEXT REFERENCES residents(id),
-  area_id         TEXT NOT NULL REFERENCES areas(id),
-  age_band        TEXT,
-  mood            TEXT,         -- "steady" | "reflective" | "concerned" | "distressed" | raw
-  free_text       TEXT,
-  need_type_id    TEXT REFERENCES need_types(id),
-  input_channel   TEXT,         -- "text" | "voice"
-  consent         INTEGER DEFAULT 1,
-  created_at      TEXT DEFAULT (datetime('now'))
+  id                TEXT PRIMARY KEY,
+  resident_id       TEXT REFERENCES residents(id),
+  area_id           TEXT NOT NULL REFERENCES areas(id),
+  age_band          TEXT,
+  mood              TEXT,         -- "steady" | "reflective" | "concerned" | "distressed" | raw
+  free_text         TEXT,
+  need_type_id      TEXT REFERENCES need_types(id),
+  input_channel     TEXT,         -- "text" | "voice"
+  consent           INTEGER DEFAULT 1,
+  -- Agentic-layer fields (populated when ANTHROPIC_API_KEY is set; templated
+  -- when the regex classifier path is used as fallback):
+  agent_reply       TEXT,         -- 1-2 sentence warm reply (spoken back via TTS)
+  key_phrases       TEXT,         -- JSON-encoded array of 1-3 paraphrased phrases
+  distress_detected INTEGER DEFAULT 0,
+  distress_urgency  TEXT,         -- "low" | "medium" | "high"
+  created_at        TEXT DEFAULT (datetime('now'))
 );
 
 CREATE INDEX IF NOT EXISTS idx_checkins_area  ON checkins(area_id);
