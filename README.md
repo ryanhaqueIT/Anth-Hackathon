@@ -6,11 +6,7 @@ Build plan: [`docs/exec-plans/active/2026-05-23-neighbourhood-pulse-e2e-build.md
 
 ## Customer journey — older resident
 
-Margaret's check-in screen, then the recommendations Claude returned for her:
-
 ![Resident check-in — four mood buttons + voice mic](docs/screenshots/employee_view.png)
-
-![Live recommendations after the agentic layer classifies the check-in](docs/screenshots/bored_view.png)
 
 ## Dashboard — council view
 
