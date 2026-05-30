@@ -1,14 +1,14 @@
-import { createOpenAI } from "@ai-sdk/openai";
+import { createAnthropic } from "@ai-sdk/anthropic";
 import { generateObject, generateText, stepCountIs, tool } from "ai";
 import { z } from "zod";
 import { type ServiceMatch, searchServices } from "./helping-out.js";
 
-const MODEL = process.env.OPENAI_MODEL ?? "gpt-4o-mini";
+const MODEL = process.env.ANTHROPIC_MODEL ?? "claude-opus-4-7";
 
 function provider() {
-	const apiKey = process.env.OPENAI_API_KEY;
+	const apiKey = process.env.ANTHROPIC_API_KEY;
 	if (!apiKey) return null;
-	return createOpenAI({ apiKey });
+	return createAnthropic({ apiKey });
 }
 
 const recommendationSchema = z.object({
@@ -33,7 +33,7 @@ export type CheckinInput = {
 
 export type CheckinResult = {
 	headline: string;
-	source: "openai" | "fallback";
+	source: "anthropic" | "fallback";
 	recommendations: Array<ServiceMatch & { why: string }>;
 	fallback_reason?: string;
 };
@@ -60,7 +60,7 @@ Tone: warm, plain, gentle. No clinical jargon. Speak in en-AU.`;
 
 export async function runCheckin(input: CheckinInput): Promise<CheckinResult> {
 	const p = provider();
-	if (!p) return fallbackSearch(input, "OPENAI_API_KEY not set");
+	if (!p) return fallbackSearch(input, "ANTHROPIC_API_KEY not set");
 
 	const seen = new Map<string, ServiceMatch>();
 	const findTool = tool({
@@ -97,7 +97,7 @@ export async function runCheckin(input: CheckinInput): Promise<CheckinResult> {
 		const candidates = Array.from(seen.values()).slice(0, 12);
 		if (candidates.length === 0) {
 			return {
-				source: "openai",
+				source: "anthropic",
 				headline: "I couldn't find a perfect match nearby today, but I'll keep listening.",
 				recommendations: [],
 			};
@@ -121,9 +121,9 @@ export async function runCheckin(input: CheckinInput): Promise<CheckinResult> {
 			})
 			.filter((x): x is ServiceMatch & { why: string } => !!x);
 
-		return { source: "openai", headline: object.headline, recommendations: picks };
+		return { source: "anthropic", headline: object.headline, recommendations: picks };
 	} catch (err) {
-		const message = err instanceof Error ? err.message : "OpenAI call failed";
+		const message = err instanceof Error ? err.message : "Anthropic call failed";
 		return fallbackSearch(input, message);
 	}
 }

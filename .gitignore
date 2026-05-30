@@ -21,8 +21,7 @@ dist-ssr
 package-lock.json
 yarn.lock
 
-# Claude Code local-only settings
-.claude/settings.local.json
+.claude
 
 # tsbuildinfo
 *.tsbuildinfo

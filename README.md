@@ -1,154 +1,152 @@
 # Neighbourhood Pulse
 
-A community wellbeing companion for the Anthropic Impact Lab. Built for older residents (65+) discovering nearby support, and for councils wanting privacy-safe visibility into connection gaps.
+A community wellbeing companion for the Anthropic Impact Lab 2026. Built for older residents (65+) discovering nearby support, and for councils wanting privacy-safe visibility into connection gaps.
 
-Build plan: [`docs/exec-plans/active/2026-05-23-neighbourhood-pulse-e2e-build.md`](./docs/exec-plans/active/2026-05-23-neighbourhood-pulse-e2e-build.md). Product context: [`docs/`](./docs/).
+Our entry consists of 2 apps: a hyper-localised resident companion and an council insights dashboard.
 
-## Customer journey — older resident
+**Resident Companion app**: Users are served prompts with accessible one-tap check-ins. Voice mode and a small set of tools let the companion go deeper when someone wants to talk and discover nearby support.
 
-![Resident check-in — four mood buttons + voice mic](docs/screenshots/employee_view.png)
+<p align="center">
+  <img src="docs/screenshots/resident-companion-app.png" width="300" alt="Resident check-in: four mood buttons and voice mic">
+</p>
 
-## Dashboard — council view
+**Council Insights app**: An aggregate view - 'mood pulse', heat map, and suburb panels - showing where residents are doing it tough. Tap into any suburb for a closer read of what's driving the signal.
 
-Council planner overview, then the Carlton drill-in:
+<p align="center">
+  <img src="docs/screenshots/dashboard.png" width="800" alt="Council dashboard: suburb heatmap with live aggregates">
+</p>
 
-![Council dashboard — suburb heatmap with live aggregates](docs/screenshots/dashboard.png)
+<p align="center">
+  <img src="docs/screenshots/dashboard-detail.png" width="800" alt="Carlton drill-in: support gap score, service density, suggested actions">
+</p>
 
-![Carlton drill-in — Support Gap score, service density, suggested actions](docs/screenshots/detailed_dashboard.png)
+## System Architecture
 
-## Stack
+```mermaid
+flowchart TD
+    %% ============ CLIENT TIER ============
+    subgraph RESIDENT["Resident companion"]
+        direction TB
+        R1["Voice / mood check-in"]
+        R2["Recommendations + companion chat"]
+    end
 
-One Express process at `:3000` serves the frontend at `/` and the API at `/api/*`.
+    %% ============ INGRESS TIER ============
+    subgraph EDGE["Ingress"]
+        direction TB
+        STT["Speech-to-text"]
+        GW["API gateway · Fastify"]
+    end
 
-- `frontend/` React 18 via CDN + in-browser Babel (no build step)
-- `backend/` Express + better-sqlite3, schema in `backend/schema.sql`
-- `mcp-server/` Cloudflare Worker MCP server for the voice companion (scaffolded)
+    %% ============ ORCHESTRATION + SAFETY TIER ============
+    subgraph CORE["Orchestration &amp; safety"]
+        direction TB
+        ORCH["Check-in orchestrator"]
+        SAFE{"Distress classifier"}
+        CRISIS["Crisis routing<br/>e.g. Lifeline, Beyond Blue"]
+    end
 
-## Run
+    %% ============ AI REASONING TIER ============
+    subgraph AI["AI reasoning"]
+        direction TB
+        LLM["LLM orchestration<br/>tool-calling · max 4 steps"]
+        SEARCH["Geo ranking results"]
+        PICKS["1–3 ranked recommendations + why"]
+    end
 
-```bash
-cd backend
-npm install
-node --env-file=.env server.js
+    %% ============ DATA TIER ============
+    subgraph DATA["Data sources"]
+        direction TB
+        CACHE[("Service cache · 1h TTL")]
+        COM[("City of Melbourne Open Data<br/>'Helping Out' dataset")]
+        STORE[("Check-in store")]
+    end
+
+    %% ============ ANALYTICS TIER ============
+    subgraph ANALYTICS["Analytics"]
+        direction TB
+        AGG["Aggregation + scoring<br/>service-gap index"]
+        METRICS[("Suburb metrics")]
+    end
+
+    %% ============ COUNCIL TIER ============
+    subgraph COUNCIL["Council dashboard"]
+        DASH["Mood pulse · heat map"]
+    end
+
+    %% ---- Resident → ingress ----
+    R1 -->|audio| STT
+    R1 -->|check-in| GW
+    STT -->|"transcript + mood + suburb + age band"| GW
+
+    %% ---- Ingress → orchestration ----
+    GW -->|"POST /checkin"| ORCH
+    ORCH --> SAFE
+    SAFE -->|crisis cue| CRISIS
+    SAFE -->|ok| LLM
+
+    %% ---- AI reasoning loop ----
+    LLM -->|find_local_services| SEARCH
+    SEARCH --> CACHE
+    CACHE -. miss .-> COM
+    SEARCH -->|candidates| LLM
+    LLM -->|structured output| PICKS
+
+    %% ---- Back to resident ----
+    PICKS --> GW
+    CRISIS --> GW
+    GW --> R2
+    R2 -->|"/chat SSE stream"| LLM
+
+    %% ---- Analytics path ----
+    ORCH -->|check-in event| STORE
+    STORE --> AGG
+    AGG --> METRICS
+    METRICS --> DASH
+
+    %% ============ STYLING ============
+    classDef client    fill:#e8f0fe,stroke:stroke-width:1px,color:#1a1a1a
+    classDef ingress   fill:#e6f4ea,stroke:stroke-width:1px,color:#1a1a1a
+    classDef core      fill:#fef7e0,stroke:stroke-width:1px,color:#1a1a1a
+    classDef ai        fill:#f3e8fd,stroke:stroke-width:1px,color:#1a1a1a
+    classDef data      fill:#f1f3f4,stroke:stroke-width:1px,color:#1a1a1a
+    classDef analytics fill:#fce8e6,stroke:stroke-width:1px,color:#1a1a1a
+    classDef crisis    fill:#fad2cf,stroke:stroke-width:2px,color:#1a1a1a
+
+    class R1,R2 client
+    class STT,GW ingress
+    class ORCH,SAFE core
+    class CRISIS crisis
+    class LLM,SEARCH,PICKS ai
+    class CACHE,COM,STORE data
+    class AGG,METRICS analytics
+    class DASH client
 ```
 
-Open <http://localhost:3000/>. First start auto-creates `backend/data.sqlite` and seeds 10 Melbourne suburbs, 8 categories, ~17 services, and ~23 mock check-ins.
+## Setup & Run
 
-## End-to-end flow
-
-```
-                          ┌────────────────────────────────────────────────────┐
-                          │   Margaret — 78, Carlton, opens localhost:3000     │
-                          └─────────────┬──────────────────────────┬───────────┘
-                                        │                          │
-                       ┌────────────────┴────────┐    ┌────────────┴────────┐
-                       │  RESIDENT input         │    │  COUNCIL view       │
-                       │ ┌─────────┐ ┌─────────┐ │    │  on mount:          │
-                       │ │ 4 mood  │ │ 🎤 mic  │ │    │  fetch('/api/       │
-                       │ │ buttons │ │ button  │ │    │   dashboard/areas') │
-                       │ └────┬────┘ └────┬────┘ │    └──────────┬──────────┘
-                       └──────┼───────────┼──────┘               │
-                              │           │                      │
-                              │   POST /api/transcribe           │
-                              │   (multipart audio)              │
-                              │   ┌───────▼────────┐             │
-                              │   │ ElevenLabs STT │ ← needs key │
-                              │   └───────┬────────┘             │
-                              │           │                      │
-                              │      transcript                  │
-                              └───────────┼──────────────────────┘
-                                          │                      │
-                              POST /api/checkins         GET /api/dashboard/areas
-                                          │                      │
-                                          ▼                      ▼
-              ┌───────────────────────────────────────────────────────────────────┐
-              │                  Express server (backend/server.js)               │
-              └────────────┬─────────────────────────────────┬────────────────────┘
-                           │                                 │
-                           ▼                                 ▼
-   ┌───────────────────────────────────────┐     ┌────────────────────────────────┐
-   │   routes/checkins.js                  │     │   routes/dashboard.js          │
-   │                                       │     │                                │
-   │   if (agent.isEnabled()):             │     │  • SELECT COUNT(*) per area    │
-   │     ┌──────────────────────────────┐  │     │  • GROUP BY need_type_id       │
-   │     │ AGENTIC LAYER — agent.js     │  │     │  • compute gap_score live      │
-   │     │  Anthropic SDK ─► Claude     │  │     │  • specialists + phrases tbls  │
-   │     │  claude-opus-4-7, adaptive   │  │     │  • mood_pulse aggregate        │
-   │     │  thinking, effort=low (≈4s)  │  │     │                                │
-   │     │                              │  │     │  Returns: areas[], mood_pulse, │
-   │     │  Returns JSON:               │  │     │           specialists, phrases │
-   │     │   need_type                  │  │     └────────────────┬───────────────┘
-   │     │   distress.urgency           │  │                      │
-   │     │   key_phrases[1-3]           │  │                      │
-   │     │   warm_reply                 │  │                      │
-   │     └───────────┬──────────────────┘  │                      │
-   │                 │                     │                      │
-   │   catch (AgentUnavailable):           │                      │
-   │     classifier.js regex + templated   │                      │
-   │     warm_reply (system stays live)    │                      │
-   │                 │                     │                      │
-   │                 ▼                     │                      │
-   │   DETERMINISTIC LAYER                 │                      │
-   │   • INSERT INTO checkins (+ agent     │                      │
-   │     columns)                          │                      │
-   │   • recommender.js → top-3 (ERD §FR5  │                      │
-   │     weights 40/25/20/15)              │                      │
-   │   • INSERT INTO recommendations       │                      │
-   └─────────────────┬─────────────────────┘                      │
-                     │                                            │
-                     ▼                                            ▼
-   ┌────────────────────────────────────────────────────────────────────────────┐
-   │           SQLite — backend/data.sqlite (WAL, FK on)                        │
-   │  areas · checkins · need_types · support_services · service_categories     │
-   │  recommendations · specialists · recurring_phrases · area_insights         │
-   └────────────────────────────────────────────────────────────────────────────┘
-                     │                                            │
-                     ▼ response JSON                              ▼ response JSON
-   ┌───────────────────────────────────────┐     ┌────────────────────────────────┐
-   │  Resident frontend (resident-app.jsx) │     │  Council frontend              │
-   │  • renders recs cards + scores        │     │  (council-dashboard.jsx)       │
-   │  • "· live · social_connection" tag   │     │  • mutates window.SUBURBS      │
-   │  • window.speechSynthesis.speak(      │     │    with live gap_score /       │
-   │    warm_reply) ← VOICE LOOP CLOSED    │     │    checkins / service_count    │
-   │  • if distress.is_distressed:         │     │  • re-renders heatmap polygons │
-   │      setScreen('support')             │     │  • side panel shows live top   │
-   │      → Lifeline 13 11 14              │     │    needs + recommended action  │
-   └───────────────────────────────────────┘     └────────────────────────────────┘
+```sh
+pnpm install
+cp .env.example .env   # set ANTHROPIC_API_KEY
+pnpm dev
 ```
 
-## API
+Open browser at <http://localhost:5173/>
 
-| Method | Path | Purpose |
-|--------|------|---------|
-| GET    | `/api/health` | Health check |
-| POST   | `/api/checkins` | Classify need, return scored recs + `warm_reply` + `distress` + `key_phrases` |
-| GET    | `/api/services` | List services. `?suburb=&need_type=` |
-| GET    | `/api/dashboard/areas` | Suburb-level live aggregates |
-| POST   | `/api/transcribe` | Multipart audio → transcript (ElevenLabs `scribe_v1`) |
-| POST   | `/api/voice-agent/token` | Short-lived WebRTC token for the convai bubble |
+## Structure
 
-## Configuration
+- `src/components/resident/` — companion app
+- `src/components/dashboard/` — council dashboard
+- `server/` — Fastify API
 
-```bash
-cp backend/.env.example backend/.env
-# ANTHROPIC_API_KEY=sk-ant-...     for Claude classification + warm replies
-# ELEVENLABS_API_KEY=...            for /api/transcribe and the convai bubble
-node --env-file=.env server.js
-```
+## Build plan
 
-Either key can be omitted; the app degrades gracefully. The boot banner prints which voice paths are enabled.
+[`docs/exec-plans/active/2026-05-23-neighbourhood-pulse-e2e-build.md`](./docs/exec-plans/active/2026-05-23-neighbourhood-pulse-e2e-build.md). Product context: [`docs/`](./docs/).
 
-## Smoke test
+## Demo
 
-```bash
-cd backend && npm start            # terminal 1
-cd backend && npm run smoke        # terminal 2
-```
+<p align="center">
+  <img src="docs/screenshots/resident-app-demo.gif" width="300" alt="Resident check-in demo">
+</p>
 
-## Known limitations
-
-- In-browser Babel transpile (slow first load, fine for demo).
-- Voice paths require ElevenLabs key.
-- KPI cards on the dashboard are still hardcoded placeholder values; live-wiring on `feature/claude-agent-layer`.
-- MCP server scaffold not deployed.
-- No auth (deferred per ERD §3); no real map (suburb-string lookups only).
+---

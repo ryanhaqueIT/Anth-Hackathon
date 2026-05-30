@@ -20,7 +20,7 @@ await app.register(cors, { origin: true });
 
 app.get("/api/health", async () => ({
 	ok: true,
-	openai: !!process.env.OPENAI_API_KEY,
+	anthropic: !!process.env.ANTHROPIC_API_KEY,
 }));
 
 const servicesQuery = z.object({
@@ -61,7 +61,7 @@ app.post("/api/chat", async (req, reply) => {
 	const model = chatProvider();
 	if (!model) {
 		reply.code(503);
-		return { error: "OPENAI_API_KEY not set" };
+		return { error: "ANTHROPIC_API_KEY not set" };
 	}
 	const { messages } = chatBody.parse(req.body);
 	const result = streamText({

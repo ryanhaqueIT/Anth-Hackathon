@@ -93,7 +93,7 @@ export function ScreenRecs({
 }) {
 	const headline = data?.headline ?? "Here are a few options that might suit today.";
 	const items = data?.recommendations ?? [];
-	const live = data?.source === "openai";
+	const live = data?.source === "anthropic";
 	return (
 		<div className="resident">
 			<ResidentTop onBack={onBack} />

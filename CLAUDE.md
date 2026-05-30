@@ -16,7 +16,7 @@ Parent directory's `CLAUDE.md` carries the broader hackathon brief (vulnerable c
 
 - pnpm (10.x) — package manager. Never run `npm` or `yarn` here; `package-lock.json` and `yarn.lock` are gitignored.
 - React 19 + Vite 8 + Tailwind 4 (`@tailwindcss/vite` plugin, not PostCSS) + shadcn (style: `base-nova`, icons: lucide).
-- Fastify 5 + Vercel AI SDK (`ai`, `@ai-sdk/openai`, `@ai-sdk/react`) + Zod 4. TypeScript via `tsx` (no separate build step for the server in dev).
+- Fastify 5 + Vercel AI SDK (`ai`, `@ai-sdk/anthropic`, `@ai-sdk/react`) + Zod 4. TypeScript via `tsx` (no separate build step for the server in dev).
 - Biome 2.x for lint + format (replaces ESLint/Prettier).
 
 ## Commands
@@ -49,8 +49,8 @@ All user-facing copy is **en-AU** ("neighbourhood", "organise", "recognise"). Th
 
 ## AI integration
 
-- Provider: **OpenAI** via Vercel AI SDK (model from `OPENAI_MODEL`, default `gpt-4o-mini`). The hackathon is Claude-themed but this entry uses OpenAI — don't "fix" that without asking.
-- Required env: `OPENAI_API_KEY` (see `.env.example`). `.env` is loaded via `dotenv.config({ override: true })` in `server/index.ts`.
+- Provider: **Anthropic** via Vercel AI SDK (model from `ANTHROPIC_MODEL`, default `claude-opus-4-7`).
+- Required env: `ANTHROPIC_API_KEY` (see `.env.example`). `.env` is loaded via `dotenv.config({ override: true })` in `server/index.ts`.
 - **Preserve the fallback path**: every AI entry point (`runCheckin`, `/api/chat`) must degrade gracefully when the key is missing — return a service search result, not a 500. See `fallbackSearch` in `server/ai.ts`.
 - Tool-using flow: `runCheckin` calls `generateText` with a `find_local_services` tool (capped at 4 steps), then `generateObject` against `recommendationSchema` to pick the final 1–3 picks. Keep this two-stage shape — it's what gives the demo its grounded outputs.
 

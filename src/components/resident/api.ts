@@ -15,7 +15,7 @@ export type ServiceRec = {
 
 export type CheckinResponse = {
 	headline: string;
-	source: "openai" | "fallback";
+	source: "anthropic" | "fallback";
 	recommendations: ServiceRec[];
 };
 
